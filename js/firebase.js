@@ -140,6 +140,7 @@ _auth.onAuthStateChanged(function(user) {
         }
       }, function(e){ toast('Sync error: ' + e.message); });
       toast('Synced ✓');
+    }).catch(function(e){ toast('Sync error: ' + e.message); });
   } else {
     dbDoc = null;
     _updateDropdown(null, null);

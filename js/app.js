@@ -131,7 +131,7 @@ $("send-btn").onclick=async function(){
  var data=st.items.filter(function(x){return !x.d&&pr(x)>0;}).map(function(x){return x.id+"|"+x.s+"|"+(x.today?"TODAY|":"")+(x.due?"due "+x.due+"|":"")+x.t;}).join("\n");
  var pend=st.g.filter(function(x){return (x.k==="cur"&&!x.d)||(x.k==="rec"&&x.n);}).map(function(x){return x.t;}).join(", ");
  var secs=SC.map(function(s){return s.id+"="+s.n;}).join("; ");
- var rules="You manage Jeevan's tasks. Today holds at most 5 items. Priority: urgent, family, work, primary business, personal errands. Reply in at most 6 short lines. Return ONLY JSON: {\"reply\":string,\"actions\":[{\"op\":\"add\",\"title\":string,\"sec\":string}|{\"op\":\"done|top\",\"id\":string}]}.\n\nOpen items:\n"+data+"\n\nPending groceries: "+pend+"\n\nMessage: "+q;
+ var rules="You manage my tasks. Today holds at most 5 items. Priority: urgent, family, work, primary business, personal errands. Reply in at most 6 short lines. Return ONLY JSON: {\"reply\":string,\"actions\":[{\"op\":\"add\",\"title\":string,\"sec\":string}|{\"op\":\"done|top\",\"id\":string}]}.\n\nOpen items:\n"+data+"\n\nPending groceries: "+pend+"\n\nMessage: "+q;
  try{var r=await sample.json(rules,{cache:false});(r.actions||[]).slice(0,12).forEach(act);save();renderAll();out.textContent=String(r.reply||"Done.");$("q").value="";}
  catch(err){out.textContent=err&&err.code==="not_granted"?"Permission not given.":"Could not reach assistant. Try again.";}
 };
