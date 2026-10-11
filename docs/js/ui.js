@@ -9,8 +9,7 @@ var focusIdx=0;
 // -- THEME --
 function applyTheme(t){
  document.documentElement.setAttribute("data-theme",t);
- var ic=t==="dark"?"☀️":"🌙";
- ["theme-btn","theme-btn2","theme-btn3","theme-btn4","theme-btn5"].forEach(function(id){var el=$(id);if(el)el.textContent=ic;});
+ var el=$('pd-theme-btn');if(el)el.textContent=(t==="dark"?"☀️ Light mode":"🌙 Dark mode");
  try{localStorage.setItem("jt-theme",t);}catch(e){}
 }
 function toggleTheme(){applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");}
@@ -20,9 +19,7 @@ function toggleTheme(){applyTheme(document.documentElement.getAttribute("data-th
  else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches)applyTheme("dark");
  else applyTheme("light");
 })();
-["theme-btn","theme-btn2","theme-btn3","theme-btn4","theme-btn5"].forEach(function(id){
- var el=$(id);if(el)el.onclick=toggleTheme;
-});
+var _pdTheme=$('pd-theme-btn');if(_pdTheme)_pdTheme.onclick=function(){toggleTheme();};
 
 // -- TOAST --
 function toast(msg,undoFn){

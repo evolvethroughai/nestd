@@ -86,7 +86,7 @@ function lcSubRow(sub,parentId){
  if(lastAmt)html+='<div class="lc-meta" style="color:var(--mute)">Last: ₹'+lastAmt+'</div>';
  var checkUrl=billCheckUrl(sub,parentId);
  var portal=getBillPortal(parentId);
- var payUrl=portal&&portal.payUrl?portal.payUrl:null;
+ var payUrl=sub.payUrl||(portal&&portal.payUrl?portal.payUrl:null);
  if(checkUrl||payUrl){
   html+='<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">';
   if(checkUrl)html+='<a href="'+checkUrl+'" target="_blank" rel="noopener" style="font-size:11px;font-weight:800;color:var(--acc);text-decoration:none;background:var(--soft);border-radius:6px;padding:3px 9px;display:inline-block">🔗 Check bill</a>';
@@ -123,6 +123,28 @@ billWithSubs.open={};
 
 function renderLifePage(type){
  var body='';
+ // Extra Life OS section
+ if(type&&type.indexOf('x-')===0){
+  var eid=type.slice(2);
+  var ex=(st.lifeExtra||[]).filter(function(e){return e.id===eid;})[0];
+  if(!ex)return '<p class="note">Section not found.</p>';
+  if(!st.lifeItems)st.lifeItems={};
+  if(!st.lifeItems[eid])st.lifeItems[eid]=[];
+  var items=st.lifeItems[eid];
+  if(!items.length)body+='<div class="empty-state"><div class="ei">'+esc(ex.icon||'📌')+'</div><p>Nothing here yet.</p></div>';
+  else items.forEach(function(item){
+   body+='<div class="lc"><div class="lc-row">';
+   body+='<span class="lc-icon">'+esc(ex.icon||'📌')+'</span>';
+   body+='<div class="lc-body"><div class="lc-name">'+esc(item.name)+'</div>'+(item.note?'<div class="lc-meta">'+esc(item.note)+'</div>':'')+'</div>';
+   if(item.amt)body+='<div class="lc-amt">₹'+esc(item.amt)+'</div>';
+   body+='<button class="lc-act" data-la="lexedit" data-lid="'+item.id+'" data-leid="'+eid+'">&#9998;</button>';
+   body+='<button class="lc-act del" data-la="lexdel" data-lid="'+item.id+'" data-leid="'+eid+'">&#128465;</button>';
+   body+='</div></div>';
+  });
+  body+='<button class="life-add-btn" data-la="lexadd" data-leid="'+eid+'">+ Add item</button>';
+  body+='<div style="margin-top:16px;text-align:center"><button style="font-size:12px;color:var(--red);background:none;border:0;cursor:pointer" data-la="lexdelsec" data-leid="'+eid+'">Remove this section</button></div>';
+  return body;
+ }
  if(type==='bills'){
   var mon=new Date().toLocaleDateString(undefined,{month:'long',year:'numeric'});
   if(!st.bills)st.bills=[];
@@ -244,11 +266,13 @@ function lmOpenSub(parentId,subId){
    +'<label>Bill portal URL <span style="font-weight:400;color:var(--mute)">(auto-filled, edit if wrong)</span></label>'
    +'<input id="lm-billurl" type="url" maxlength="300" value="'+esc(sub?sub.billUrl||portal.url:portal.url)+'">';
  } else {
-  f+='<label>Bill portal URL</label>'
+  f+='<label>Bill portal URL (for checking bill)</label>'
    +'<input id="lm-billurl" type="url" maxlength="300" placeholder="https://..." value="'+esc(sub?sub.billUrl||'':'')+'">'
    +'<div style="font-size:11px;color:var(--mute);margin-top:4px">Paste the bill check URL for this connection.</div>';
  }
- f+='<input type="hidden" id="lm-due" value=""><input type="hidden" id="lm-icon" value=""><input type="hidden" id="lm-amt" value="">';
+ f+='<label>Pay now URL <span style="font-weight:400;color:var(--mute)">(optional — e.g. Amazon Pay, PhonePe link)</span></label>'
+  +'<input id="lm-payurl" type="url" maxlength="300" placeholder="https://..." value="'+esc(sub?sub.payUrl||'':'')+'">'
+  +'<input type="hidden" id="lm-due" value=""><input type="hidden" id="lm-icon" value=""><input type="hidden" id="lm-amt" value="">';
  $('lm-fields').innerHTML=f;
  $('life-modal-overlay').hidden=false;
  setTimeout(function(){var n=$('lm-name');if(n)n.focus();},60);
@@ -256,7 +280,8 @@ function lmOpenSub(parentId,subId){
 
 function openLifePage(type){
  currentLife=type;
- $('life-page-title').textContent=LIFE_TITLES[type]||type;
+ var LNAMES={bills:'Bills',emis:'EMIs & Chits',invest:'Investments',health:'Health',biz2:'Business'};
+ $('life-page-title').textContent=nm('l-'+type,LIFE_TITLES[type]||type);
  $('life-page-body').innerHTML=renderLifePage(type);
  $('life-page-body').scrollTop=0;
  $('life-page').scrollTop=0;
@@ -267,11 +292,6 @@ function closeLifePage(){
  setTimeout(function(){currentLife=null;},300);
 }
 $('life-back-btn').onclick=closeLifePage;
-document.addEventListener('click',function(e){
- var lc=e.target.closest('[data-lv]');if(!lc)return;
- openLifePage(lc.getAttribute('data-lv'));
-});
-
 function lmClose(){$('life-modal-overlay').hidden=true;lmEditId=null;lmType=null;}
 $('lm-cancel').onclick=lmClose;
 $('life-modal-overlay').addEventListener('click',function(e){if(e.target===$('life-modal-overlay'))lmClose();});
@@ -330,7 +350,7 @@ $('lm-save').onclick=function(){
   var pid=($('lm-subbill-pid')||{value:''}).value;
   var dueDay=parseInt(($('lm-dueday')||{value:'15'}).value)||15;
   var existSub=lmEditId?st.subBills.filter(function(x){return x.id===lmEditId;})[0]:null;
-  var sobj={id:lmEditId||('sb'+Date.now()),parentId:pid,name:name,note:note||undefined,dueDay:dueDay,consumerNo:($('lm-consno')||{value:''}).value.trim()||undefined,billUrl:($('lm-billurl')||{value:''}).value.trim()||undefined,amtHistory:existSub?existSub.amtHistory||{}:{},paid:existSub?existSub.paid:false,paidMonth:existSub?existSub.paidMonth:undefined};
+  var sobj={id:lmEditId||('sb'+Date.now()),parentId:pid,name:name,note:note||undefined,dueDay:dueDay,consumerNo:($('lm-consno')||{value:''}).value.trim()||undefined,billUrl:($('lm-billurl')||{value:''}).value.trim()||undefined,payUrl:($('lm-payurl')||{value:''}).value.trim()||undefined,amtHistory:existSub?existSub.amtHistory||{}:{},paid:existSub?existSub.paid:false,paidMonth:existSub?existSub.paidMonth:undefined};
   if(lmEditId){var si=st.subBills.findIndex(function(x){return x.id===lmEditId;});if(si>=0)st.subBills[si]=sobj;}
   else st.subBills.push(sobj);
   save();lmClose();if(currentLife)$('life-page-body').innerHTML=renderLifePage(currentLife);toast('Saved');return;
@@ -386,6 +406,37 @@ $('life-page-body').addEventListener('input',function(e){
 $('life-page-body').addEventListener('click',function(e){
  var b=e.target.closest('[data-la]');if(!b)return;
  var la=b.getAttribute('data-la'),lid=b.getAttribute('data-lid'),ltype=b.getAttribute('data-ltype');
+ if(la==='lexadd'){
+  var leid=b.getAttribute('data-leid');
+  var ex=(st.lifeExtra||[]).filter(function(e){return e.id===leid;})[0];
+  var nm2=prompt('Item name:','');if(!nm2||!nm2.trim())return;
+  var note2=prompt('Note / amount (optional):','');
+  if(!st.lifeItems)st.lifeItems={};
+  if(!st.lifeItems[leid])st.lifeItems[leid]=[];
+  st.lifeItems[leid].push({id:'lx'+Date.now(),name:nm2.trim(),note:note2&&note2.trim()||undefined});
+  save();$('life-page-body').innerHTML=renderLifePage(currentLife);return;
+ }
+ if(la==='lexedit'){
+  var leid=b.getAttribute('data-leid'),lid2=b.getAttribute('data-lid');
+  if(!st.lifeItems||!st.lifeItems[leid])return;
+  var item=st.lifeItems[leid].filter(function(x){return x.id===lid2;})[0];if(!item)return;
+  var nv=prompt('Rename:',item.name);if(!nv||!nv.trim())return;
+  item.name=nv.trim();
+  save();$('life-page-body').innerHTML=renderLifePage(currentLife);return;
+ }
+ if(la==='lexdel'){
+  var leid=b.getAttribute('data-leid'),lid2=b.getAttribute('data-lid');
+  if(!st.lifeItems||!st.lifeItems[leid])return;
+  st.lifeItems[leid]=st.lifeItems[leid].filter(function(x){return x.id!==lid2;});
+  save();$('life-page-body').innerHTML=renderLifePage(currentLife);toast('Deleted');return;
+ }
+ if(la==='lexdelsec'){
+  var leid=b.getAttribute('data-leid');
+  if(!confirm('Remove this section and all its items?'))return;
+  st.lifeExtra=(st.lifeExtra||[]).filter(function(e){return e.id!==leid;});
+  if(st.lifeItems)delete st.lifeItems[leid];
+  save();closeLifePage();renderAll();return;
+ }
  if(la==='ladd'){lmOpen(ltype,null,b.getAttribute('data-htype'));return;}
  if(la==='ledit'){lmOpen(ltype,lid);return;}
  if(la==='lsubtoggle'){

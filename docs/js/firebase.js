@@ -93,6 +93,11 @@ document.getElementById('pd-settings-btn').onclick = function() {
   document.getElementById('profile-drop').hidden = true;
   _openProfileSheet();
 };
+var _pdThemeBtn = document.getElementById('pd-theme-btn');
+if (_pdThemeBtn) _pdThemeBtn.onclick = function() {
+  document.getElementById('profile-drop').hidden = true;
+  if (typeof toggleTheme === 'function') toggleTheme();
+};
 
 // --- Profile settings sheet ---
 function _openProfileSheet() {
@@ -141,12 +146,11 @@ _auth.onAuthStateChanged(function(user) {
       dbDoc.onSnapshot(function(snap) {
         if (snap.exists && snap.data().json) {
           var remote = JSON.parse(snap.data().json);
-          if (!st.day || remote.day >= st.day) {
-            st = migrate(remote);
-            try { localStorage.setItem('jt-v5', JSON.stringify(st)); } catch(e) {}
-            if (typeof renderAll === 'function') renderAll();
-          }
+          st = migrate(remote);
+          try { localStorage.setItem('jt-v5', JSON.stringify(st)); } catch(e) {}
+          if (typeof renderAll === 'function') renderAll();
         } else {
+          // Nothing in Firestore yet — push local data up
           dbDoc.set({ json: JSON.stringify(st) }).catch(function(){});
         }
       }, function(e){ toast('Sync error: ' + e.message); });
@@ -156,5 +160,9 @@ _auth.onAuthStateChanged(function(user) {
     dbDoc = null;
     _fbProfile = null;
     _updateDropdown(null, null);
+    // Clear local state on sign out
+    st = migrate(JSON.parse(JSON.stringify(SEED)));
+    try { localStorage.removeItem('jt-v5'); } catch(e) {}
+    if (typeof renderAll === 'function') renderAll();
   }
 });

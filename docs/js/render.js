@@ -136,9 +136,11 @@ function macc(id,title,body){
 }
 macc.open={};
 
-function subsec(title,cnt,body){
+function subsec(title,cnt,body,secId){
  return '<div class="subsec">'
-  +'<div class="subsec-title"><span>'+title+'</span><span class="cnt">'+cnt+'</span></div>'
+  +'<div class="subsec-title"><span>'+title+'</span><span class="cnt">'+cnt+'</span>'
+  +(secId?'<button class="cc-edit-btn" data-a="renameSec" data-sec="'+secId+'" title="Rename section" style="margin-left:auto">···</button>':'')
+  +'</div>'
   +body
   +'</div>';
 }
@@ -204,16 +206,24 @@ function renderAll(){
  }
  var allDueBills=[];
  if(st.bills)st.bills.forEach(function(b){
-  if(!b.paid){var d=lifeDueDays(b.due);if(d!==null&&d<=5)allDueBills.push({name:b.name,due:b.due,dd:d,amt:b.amt});}
+  if(!b.paid){var d=lifeDueDays(b.due);if(d!==null&&d<=2)allDueBills.push({name:b.name,due:b.due,dd:d,amt:b.amt,payUrl:b.payUrl});}
  });
  if(st.subBills)st.subBills.forEach(function(s){
-  if(!s.paid){var d=lifeDueDays(subDueDate(s.dueDay));if(d!==null&&d<=5)allDueBills.push({name:s.name,due:subDueDate(s.dueDay),dd:d,amt:s.amt});}
+  if(!s.paid){
+   var d=lifeDueDays(subDueDate(s.dueDay));
+   if(d!==null&&d<=2){
+    var parent=st.bills?st.bills.filter(function(b){return b.id===s.parentId;})[0]:null;
+    var portal=typeof getBillPortal==='function'?getBillPortal(s.parentId):null;
+    var payUrl=s.payUrl||(portal&&portal.payUrl)||null;
+    allDueBills.push({name:(parent?parent.name+' — ':'')+s.name,due:subDueDate(s.dueDay),dd:d,amt:s.amt,payUrl:payUrl});
+   }
+  }
  });
  allDueBills.sort(function(a,b){return a.dd-b.dd;});
  allDueBills.forEach(function(b){
-  var lbl=b.dd<0?'Overdue':b.dd===0?'Due today':b.dd===1?'Due tomorrow':('Due in '+b.dd+' days');
+  var lbl=b.dd<0?'Overdue':b.dd===0?'Due today':b.dd===1?'Due tomorrow':'Due in 2 days';
   var cls=b.dd<0?'banner-over':b.dd<=1?'banner-fin':'banner-bk';
-  bhtml+='<div class="banner '+cls+'"><div class="bi">💳</div><div class="bt"><b>'+esc(b.name)+'</b><span>'+lbl+(b.amt?' — ₹'+b.amt:'')+'</span></div><button class="bact" data-a="gbills">View</button></div>';
+  bhtml+='<div class="banner '+cls+'"><div class="bi">💳</div><div class="bt"><b>'+esc(b.name)+'</b><span>'+lbl+(b.amt?' — ₹'+b.amt:'')+'</span></div>'+(b.payUrl?'<a href="'+b.payUrl+'" target="_blank" rel="noopener" class="bact" style="text-decoration:none">Pay now</a>':'<button class="bact" data-a="gbills">View</button>')+'</div>';
  });
  $("banners").innerHTML=bhtml;
  if($("next-btn2"))$("next-btn2").onclick=function(){fill();save();renderAll();};
@@ -229,8 +239,27 @@ function renderAll(){
    var urgK=st.items.filter(function(x){return !x.d&&!x.today&&SEC[x.s]&&SEC[x.s].m===k&&pr(x)===1;}).length;
    return '<div class="cat-card '+MCLS[k]+'" data-cat="'+k+'">'
     +(urgK?'<span class="cc-badge">'+urgK+' urgent</span>':'')
+    +'<button class="cc-edit-btn" data-a="dotmenu" data-dtype="cat" data-dkey="'+k+'">···</button>'
     +'<span class="cc-icon">'+MICON[k]+'</span>'
     +'<div class="cc-name">'+esc(nm('m-'+k,M[k]))+'</div>'
+    +'<div class="cc-cnt">'+cnt+' items</div>'
+    +'</div>';
+  }).join('')
+  +(st.catExtra||[]).map(function(e){
+   var cnt=st.items.filter(function(x){return x.s===e.id&&!x.d&&!x.today;}).length;
+   return '<div class="cat-card cat-D" data-catextra="'+e.id+'">'
+    +'<button class="cc-edit-btn" data-a="dotmenu" data-dtype="catextra" data-dkey="'+e.id+'">···</button>'
+    +'<span class="cc-icon">'+esc(e.icon||'📌')+'</span>'
+    +'<div class="cc-name">'+esc(e.label)+'</div>'
+    +'<div class="cc-cnt">'+cnt+' items</div>'
+    +'</div>';
+  }).join('')
+  +(st.secExtra||[]).map(function(e){
+   var cnt=st.items.filter(function(x){return x.s===e.id&&!x.d&&!x.today;}).length;
+   return '<div class="cat-card '+(MCLS[e.m]||'cat-D')+'" data-cat="'+e.m+'" data-secextra="'+e.id+'">'
+    +'<button class="cc-edit-btn" data-a="dotmenu" data-dtype="secextra" data-dkey="'+e.id+'">···</button>'
+    +'<span class="cc-icon">'+esc(e.icon||'📌')+'</span>'
+    +'<div class="cc-name">'+esc(e.label)+'</div>'
     +'<div class="cc-cnt">'+cnt+' items</div>'
     +'</div>';
   }).join('');
@@ -242,8 +271,18 @@ function renderAll(){
    if(k==='C'){var nowM=st.g.filter(function(x){return x.k==='rec'&&x.n;}).length;cnt=st.g.filter(function(x){return x.k==='cur'&&!x.d;}).length+nowM;}
    else cnt=st.g.filter(function(x){return x.k==='week'&&!x.d;}).length;
    return '<div class="cat-card '+MCLS[k]+'" data-cat="'+k+'">'
+    +'<button class="cc-edit-btn" data-a="dotmenu" data-dtype="cat" data-dkey="'+k+'">···</button>'
     +'<span class="cc-icon">'+MICON[k]+'</span>'
     +'<div class="cc-name">'+esc(nm('m-'+k,M[k]))+'</div>'
+    +'<div class="cc-cnt">'+cnt+' items</div>'
+    +'</div>';
+  }).join('')
+  +(st.gExtra||[]).map(function(e){
+   var cnt=st.g.filter(function(x){return x.grp===e.id&&!x.d;}).length;
+   return '<div class="cat-card cat-C" data-cat="C" data-gextra="'+e.id+'">'
+    +'<button class="cc-edit-btn" data-a="dotmenu" data-dtype="gextra" data-dkey="'+e.id+'">···</button>'
+    +'<span class="cc-icon">'+esc(e.icon||'🛋')+'</span>'
+    +'<div class="cc-name">'+esc(e.label)+'</div>'
     +'<div class="cc-cnt">'+cnt+' items</div>'
     +'</div>';
   }).join('');
@@ -261,12 +300,31 @@ function renderAll(){
    var c=d.cnt(),b=d.badge();
    return '<div class="cat-card '+d.cls+'" data-lv="'+d.k+'">'
     +(b?'<span class="cc-badge">'+b+' due</span>':'')
+    +'<button class="cc-edit-btn" data-a="dotmenu" data-dtype="life" data-dkey="'+d.k+'">···</button>'
+    +'<button class="cc-add-btn" data-a="quickAddLife" data-lk="'+d.k+'">+</button>'
     +'<span class="cc-icon">'+d.icon+'</span>'
-    +'<div class="cc-name">'+d.label+'</div>'
+    +'<div class="cc-name">'+esc(nm('l-'+d.k,d.label))+'</div>'
+    +'<div class="cc-cnt">'+c+' item'+(c!==1?'s':'')+'</div>'
+    +'</div>';
+  }).join('')
+  +(st.lifeExtra||[]).map(function(e){
+   var c=(st.lifeItems&&st.lifeItems[e.id]||[]).length;
+   return '<div class="cat-card cat-biz2" data-lv="x-'+e.id+'">'
+    +'<button class="cc-edit-btn" data-a="dotmenu" data-dtype="lifeextra" data-dkey="'+e.id+'">···</button>'
+    +'<button class="cc-add-btn" data-a="quickAddLifeExtra" data-leid="'+e.id+'">+</button>'
+    +'<span class="cc-icon">'+esc(e.icon||'📌')+'</span>'
+    +'<div class="cc-name">'+esc(e.label)+'</div>'
     +'<div class="cc-cnt">'+c+' item'+(c!==1?'s':'')+'</div>'
     +'</div>';
   }).join('');
  }
  if(currentLife){$('life-page-body').innerHTML=renderLifePage(currentLife);}
- if(currentCat){$("cat-page-body").innerHTML=renderCatPage(currentCat);attachCatPageEvents();}
+ if(currentCat){
+  if(currentCat.indexOf('ce-')===0){$("cat-page-body").innerHTML=renderCatExtraPage(currentCat.slice(3));attachCatPageEvents();}
+  else{$("cat-page-body").innerHTML=renderCatPage(currentCat);attachCatPageEvents();}
+ }
+ // Update list section headers
+ var lshg=$('lsh-groc');if(lshg)lshg.textContent=nm('lsec-groc','🛒 Groceries');
+ var lshl=$('lsh-life');if(lshl)lshl.textContent=nm('lsec-life','🌱 Life OS');
+ var lsht=$('lsh-tasks');if(lsht)lsht.textContent=nm('lsec-tasks','✅ Quick Tasks');
 }

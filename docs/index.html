@@ -12,6 +12,14 @@
 <meta name="apple-mobile-web-app-title" content="Nestd">
 </head>
 <body>
+<!-- SPLASH SCREEN -->
+<div id="splash" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:999;background:linear-gradient(135deg,#0a0a0a 0%,#0d1117 50%,#0a0f1e 100%);overflow:hidden;transition:opacity .6s ease">
+ <canvas id="splash-canvas" style="position:absolute;top:0;left:0;z-index:1"></canvas>
+ <div style="position:absolute;top:0;left:0;width:100vw;height:100vh;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:none">
+  <img src="icon-512.png" style="width:120px;height:120px;border-radius:28px;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+  <div id="splash-tag" style="font:700 15px Nunito,sans-serif;color:rgba(255,255,255,.85);letter-spacing:3px;text-transform:uppercase;opacity:0;transition:opacity .8s ease">Get Sortd</div>
+ </div>
+</div>
 <div id="toast"></div>
 <div id="modal-overlay" hidden>
  <div id="modal">
@@ -42,8 +50,7 @@
   <section id="v-today">
    <div class="page-header">
     <div><h1 id="hi">Hello</h1></div>
-    <button id="profile-btn" class="profile-btn" aria-label="Account"><span id="profile-avatar">🔐</span></button>
-    <button class="hbtn" id="theme-btn" aria-label="Toggle theme">🌙</button>
+    <button id="profile-btn" class="profile-btn" aria-label="Account"><span id="profile-avatar">&#128272;</span></button>
    </div>
    <div class="today-hero" id="today-hero">
     <div class="hero-greeting" id="hero-greeting"></div>
@@ -83,22 +90,23 @@
   <section id="v-lists" hidden>
    <div class="page-header">
     <div><h1>My Lists</h1><p class="sub">Tap a category to open it</p></div>
-    <button class="hbtn" id="theme-btn2" aria-label="Toggle theme">🌙</button>
    </div>
    <div id="cat-grid-wrap">
-    <div class="sec-title" style="padding-top:4px">🛒 Groceries</div>
+    <div class="list-sec-hd"><span id="lsh-groc">🛒 Groceries</span><button class="lsh-edit" data-a="dotmenu" data-dtype="lsec" data-dkey="groc">···</button></div>
     <div class="cat-grid" id="groc-grid"></div>
-    <div class="sec-title" style="padding-top:4px">🌱 Life OS</div>
+    <div class="list-sec-hd"><span id="lsh-life">🌱 Life OS</span><button class="lsh-edit" data-a="dotmenu" data-dtype="lsec" data-dkey="life">···</button></div>
     <div class="cat-grid" id="life-grid"></div>
-    <div class="sec-title" style="padding-top:4px">✅ Quick Tasks</div>
+    <div class="list-sec-hd"><span id="lsh-tasks">✅ Quick Tasks</span><button class="lsh-edit" data-a="dotmenu" data-dtype="lsec" data-dkey="tasks">···</button></div>
     <div class="cat-grid" id="cat-grid"></div>
+    <div style="padding:10px 14px 20px"><div class="cat-card cat-add" data-a="addCatExtra" style="max-width:160px"><span class="cc-icon">+</span><div class="cc-name">New category</div></div></div>
    </div>
+   <!-- DOT MENU -->
+   <div id="dot-menu" hidden style="position:fixed;z-index:80;background:var(--card);border-radius:14px;box-shadow:var(--shadow-lg);padding:6px;min-width:160px"></div>
   </section>
   <!-- ASK VIEW -->
   <section id="v-ask" hidden>
    <div class="page-header">
     <div><h1>Ask</h1><p class="sub">Your AI assistant</p></div>
-    <button class="hbtn" id="theme-btn3" aria-label="Toggle theme">🌙</button>
    </div>
    <div class="ask-wrap">
     <button id="pwa-install-btn" hidden style="width:100%;margin-bottom:14px;padding:13px;background:linear-gradient(135deg,#6c63ff,#a78bfa);color:#fff;border:0;border-radius:14px;font:800 15px Nunito,sans-serif;cursor:pointer;letter-spacing:.3px" onclick="if(_deferredPrompt){_deferredPrompt.prompt();_deferredPrompt.userChoice.then(function(){_deferredPrompt=null;document.getElementById('pwa-install-btn').hidden=true;});}">
@@ -140,7 +148,6 @@
   <div class="cat-page-header">
    <button class="back-btn" id="life-back-btn">←</button>
    <h2 id="life-page-title"></h2>
-   <button class="hbtn" id="theme-btn5" aria-label="Toggle theme">🌙</button>
   </div>
   <div class="cat-page-body" id="life-page-body" style="padding-bottom:140px"></div>
  </div>
@@ -161,7 +168,6 @@
   <div class="cat-page-header">
    <button class="back-btn" id="back-btn">←</button>
    <h2 id="cat-page-title"></h2>
-   <button class="hbtn" id="theme-btn4" aria-label="Toggle theme">🌙</button>
   </div>
   <div class="cat-page-body" id="cat-page-body"></div>
  </div>
@@ -196,6 +202,7 @@
     <div id="pd-avatar-lg"></div>
     <div><div id="pd-name"></div><div id="pd-email"></div></div>
    </div>
+   <button id="pd-theme-btn">🌙 Dark mode</button>
    <button id="pd-settings-btn">⚙️ Account settings</button>
    <button id="pd-signout-btn">↩ Sign out</button>
    <button id="pd-signin-btn">🔐 Sign in with Google</button>
@@ -235,37 +242,6 @@
 <script src="js/app.js"></script>
 <script src="js/firebase.js"></script>
 <script>
-// Generate PWA icons via canvas if not already present
-(function(){
-  function makeIcon(size){
-    var c=document.createElement('canvas');c.width=c.height=size;
-    var x=c.getContext('2d');
-    var r=size*0.22;
-    x.beginPath();x.moveTo(r,0);x.lineTo(size-r,0);x.quadraticCurveTo(size,0,size,r);
-    x.lineTo(size,size-r);x.quadraticCurveTo(size,size,size-r,size);
-    x.lineTo(r,size);x.quadraticCurveTo(0,size,0,size-r);
-    x.lineTo(0,r);x.quadraticCurveTo(0,0,r,0);x.closePath();
-    x.fillStyle='#6c63ff';x.fill();
-    x.font='bold '+(size*0.55)+'px serif';
-    x.textAlign='center';x.textBaseline='middle';
-    x.fillText('📋',size/2,size*0.54);
-    return c.toDataURL('image/png');
-  }
-  // Store generated icons in sessionStorage so SW can serve them
-  if(!sessionStorage.iconsGenerated){
-    ['192','512'].forEach(function(s){
-      var data=makeIcon(+s);
-      // Create a blob URL and register with SW via postMessage
-      fetch(data).then(function(r){return r.blob();}).then(function(blob){
-        if(navigator.serviceWorker&&navigator.serviceWorker.controller){
-          navigator.serviceWorker.controller.postMessage({type:'CACHE_ICON',name:'icon-'+s+'.png',blob:blob});
-        }
-      });
-    });
-    sessionStorage.iconsGenerated=1;
-  }
-})();
-// Install prompt
 var _deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();_deferredPrompt=e;
@@ -279,6 +255,50 @@ window.addEventListener('appinstalled',function(){
   if(typeof toast==='function')toast('App installed! 🎉');
 });
 if('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(regs){regs.forEach(function(r){r.unregister();});});
+// Splash
+(function(){
+  var splash=document.getElementById('splash');
+  var canvas=document.getElementById('splash-canvas');
+  var tag=document.getElementById('splash-tag');
+  if(!splash||!canvas)return;
+  var ctx=canvas.getContext('2d');
+  var W=canvas.width=window.innerWidth;
+  var H=canvas.height=window.innerHeight;
+  var cx=W/2, cy=H/2;
+  var ICONS=['💧','🔥','⚡','💸','🚀','🛍️','🏦','💎','🔔','✅','💊','🎨','🏡','🎯','🚘','🧾','🌱','📱','💰','🎸'];
+  var pts=ICONS.map(function(ic,i){
+    var a=(i/ICONS.length)*Math.PI*2;
+    return {ic:ic,a:a,d:Math.min(W,H)*0.46,alpha:0};
+  });
+  var t0=Date.now(),raf,tagDone=false;
+  function easeInOutQuint(t){return t<0.5?16*t*t*t*t*t:1-Math.pow(-2*t+2,5)/2;}
+  function frame(){
+    var e=Date.now()-t0;
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(function(p,i){
+      var fadeT=Math.min(e/600,1);
+      var moveStart=1500+i*50;
+      var pe=Math.max(0,Math.min(1,(e-moveStart)/5500));
+      var ease=easeInOutQuint(pe);
+      p.alpha=Math.min(fadeT,1-ease);
+      if(p.alpha<0.02)return;
+      ctx.globalAlpha=p.alpha;
+      ctx.font=Math.round(54-ease*18)+'px serif';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(p.ic,cx+Math.cos(p.a)*p.d*(1-ease),cy+Math.sin(p.a)*p.d*(1-ease));
+    });
+    ctx.globalAlpha=1;
+    if(e>5500&&!tagDone){tagDone=true;if(tag)tag.style.opacity='1';}
+    raf=requestAnimationFrame(frame);
+  }
+  raf=requestAnimationFrame(frame);
+  setTimeout(function(){
+    cancelAnimationFrame(raf);
+    splash.style.opacity='0';
+    setTimeout(function(){splash.style.display='none';},650);
+  },8000);
+})();
 </script>
 </body>
 </html>

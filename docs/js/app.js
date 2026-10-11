@@ -13,8 +13,13 @@ $("nav").addEventListener("click",function(e){var b=e.target.closest("[data-v]")
 document.addEventListener("click",function(e){
  var cc=e.target.closest(".cat-card");
  if(cc&&!e.target.closest("[data-a]")){
-  if(cc.getAttribute('data-lv'))return;
-  openCatPage(cc.getAttribute("data-cat"));return;
+  var lv=cc.getAttribute('data-lv');
+  var cex=cc.getAttribute('data-catextra');
+  var cat=cc.getAttribute('data-cat');
+  if(lv){openLifePage(lv);return;}
+  if(cex){openCatExtraPage(cex);return;}
+  if(cat){openCatPage(cat);return;}
+  return;
  }
  var b=e.target.closest("[data-a]");if(!b)return;
  var a=b.getAttribute("data-a"),id=b.getAttribute("data-id");
@@ -39,7 +44,139 @@ document.addEventListener("click",function(e){
   if(!qi||!qi.value.trim())return;
   st.items.push({id:"u"+Date.now()+Math.floor(Math.random()*999),s:qs,t:qi.value.trim(),d:false});
   qi.value="";if(!tl().length)fill();save();renderAll();
-  toast("Added to "+(SEC[qs]?nm("s-"+qs,SEC[qs].n):"list"));return;
+  var secName=SEC[qs]?nm("s-"+qs,SEC[qs].n):((st.secExtra||[]).filter(function(e){return e.id===qs;})[0]||{label:"list"}).label;
+  toast("Added to "+secName);return;
+ }
+ if(a==="quickAddLife"){
+  var lk=b.getAttribute('data-lk');
+  openLifePage(lk);
+  setTimeout(function(){lmOpen(lk,null);},320);
+  return;
+ }
+ if(a==="quickAddLifeExtra"){
+  var leid=b.getAttribute('data-leid');
+  openLifePage('x-'+leid);
+  setTimeout(function(){
+   var ex=(st.lifeExtra||[]).filter(function(e){return e.id===leid;})[0];
+   var nm2=prompt('Item name:','');if(!nm2||!nm2.trim())return;
+   var note2=prompt('Note / amount (optional):','');
+   if(!st.lifeItems)st.lifeItems={};
+   if(!st.lifeItems[leid])st.lifeItems[leid]=[];
+   st.lifeItems[leid].push({id:'lx'+Date.now(),name:nm2.trim(),note:note2&&note2.trim()||undefined});
+   save();if(currentLife)$('life-page-body').innerHTML=renderLifePage(currentLife);
+  },320);
+  return;
+ }
+ if(a==="dotmenu"){
+  e.stopPropagation();
+  var dtype=b.getAttribute('data-dtype'),dkey=b.getAttribute('data-dkey');
+  var rect=b.getBoundingClientRect();
+  var menu=$('dot-menu');
+  // Build menu items based on type
+  var items=[];
+  // Rename option — label depends on type
+  var curName='';
+  if(dtype==='cat')curName=nm('m-'+dkey,M[dkey]||dkey);
+  else if(dtype==='life'){var LN={bills:'Bills',emis:'EMIs & Chits',invest:'Investments',health:'Health',biz2:'Business'};curName=nm('l-'+dkey,LN[dkey]||dkey);}
+  else if(dtype==='lsec'){var LD={'groc':'🛒 Groceries','life':'🌱 Life OS','tasks':'✅ Quick Tasks'};curName=nm('lsec-'+dkey,LD[dkey]);}
+  else if(dtype==='gextra'){var ge=(st.gExtra||[]).filter(function(x){return x.id===dkey;})[0];curName=ge?ge.label:dkey;}
+  else if(dtype==='lifeextra'){var le=(st.lifeExtra||[]).filter(function(x){return x.id===dkey;})[0];curName=le?le.label:dkey;}
+  else if(dtype==='catextra'){var ce=(st.catExtra||[]).filter(function(x){return x.id===dkey;})[0];curName=ce?ce.label:dkey;}
+  else if(dtype==='secextra'){var se=(st.secExtra||[]).filter(function(x){return x.id===dkey;})[0];curName=se?se.label:dkey;}
+  items.push({label:'✏️ Rename',fn:function(){
+   var nv=prompt('Rename:',curName);if(!nv||!nv.trim())return;
+   if(!st.nm)st.nm={};
+   if(dtype==='cat')st.nm['m-'+dkey]=nv.trim();
+   else if(dtype==='life')st.nm['l-'+dkey]=nv.trim();
+   else if(dtype==='lsec')st.nm['lsec-'+dkey]=nv.trim();
+   else if(dtype==='gextra'){var ge=(st.gExtra||[]).filter(function(x){return x.id===dkey;})[0];if(ge)ge.label=nv.trim();}
+   else if(dtype==='lifeextra'){var le=(st.lifeExtra||[]).filter(function(x){return x.id===dkey;})[0];if(le)le.label=nv.trim();}
+   else if(dtype==='catextra'){var ce=(st.catExtra||[]).filter(function(x){return x.id===dkey;})[0];if(ce)ce.label=nv.trim();}
+   else if(dtype==='secextra'){var se=(st.secExtra||[]).filter(function(x){return x.id===dkey;})[0];if(se)se.label=nv.trim();}
+   save();renderAll();
+  }});
+  // Add new section — only for task categories and section headers
+  if(dtype==='cat'&&dkey!=='C'&&dkey!=='V'){
+   items.push({label:'+ Add new section',fn:function(){
+    var label=prompt('New section name:','');if(!label||!label.trim())return;
+    if(!st.secExtra)st.secExtra=[];
+    st.secExtra.push({id:'se'+Date.now(),label:label.trim(),icon:'📌',m:dkey});
+    save();renderAll();
+   }});
+  }
+  if(dtype==='lsec'&&dkey==='groc'){
+   items.push({label:'+ Add new section',fn:function(){
+    var label=prompt('New grocery section name:','');if(!label||!label.trim())return;
+    if(!st.gExtra)st.gExtra=[];
+    st.gExtra.push({id:'ge'+Date.now(),label:label.trim(),icon:'🛋'});
+    save();renderAll();
+   }});
+  }
+  if(dtype==='lsec'&&dkey==='life'){
+   items.push({label:'+ Add new section',fn:function(){
+    var label=prompt('New Life OS section name:','');if(!label||!label.trim())return;
+    if(!st.lifeExtra)st.lifeExtra=[];
+    st.lifeExtra.push({id:'le'+Date.now(),label:label.trim(),icon:'📌'});
+    save();renderAll();
+   }});
+  }
+  if(dtype==='lsec'&&dkey==='tasks'){
+   items.push({label:'+ Add new section',fn:function(){
+    var label=prompt('New section name:','');if(!label||!label.trim())return;
+    var cats=Object.keys(M).filter(function(k){return k!=='C'&&k!=='V';});
+    var catOpts=cats.map(function(k,i){return (i+1)+'. '+nm('m-'+k,M[k]);}).join('\n');
+    var catIdx=parseInt(prompt('Add to which category?\n'+catOpts,'1'))-1;
+    if(isNaN(catIdx)||catIdx<0||catIdx>=cats.length)return;
+    if(!st.secExtra)st.secExtra=[];
+    st.secExtra.push({id:'se'+Date.now(),label:label.trim(),icon:'📌',m:cats[catIdx]});
+    save();renderAll();
+   }});
+  }
+  // Build and show menu
+  menu.innerHTML=items.map(function(item,i){
+   return '<button class="dmenu-item" data-dmi="'+i+'">'+item.label+'</button>';
+  }).join('');
+  // Position near button
+  var top=rect.bottom+6,left=rect.left;
+  if(left+170>window.innerWidth)left=window.innerWidth-176;
+  menu.style.top=top+'px';menu.style.left=left+'px';
+  menu.hidden=false;
+  // Store fns
+  menu._fns=items.map(function(x){return x.fn;});
+  return;
+ }
+ if(a==="addCatExtra"){
+  var label=prompt('New category name:','');if(!label||!label.trim())return;
+  var icon=prompt('Emoji icon:','📌');if(icon===null)return;
+  if(!st.catExtra)st.catExtra=[];
+  var ceid='ce'+Date.now();
+  st.catExtra.push({id:ceid,label:label.trim(),icon:icon.trim()||'📌'});
+  save();renderAll();return;
+ }
+ if(a==="delSecExtra"){
+  var seid=b.getAttribute('data-seid');
+  if(!confirm('Remove this section?'))return;
+  st.secExtra=(st.secExtra||[]).filter(function(x){return x.id!==seid;});
+  save();renderAll();
+  if(currentCat&&currentCat.indexOf('ce-')<0)$('cat-page-body').innerHTML=renderCatPage(currentCat);
+  attachCatPageEvents();return;
+ }
+ if(a==="delCatExtra"){
+  var ceid=b.getAttribute('data-ceid');
+  if(!confirm('Remove this category?'))return;
+  st.catExtra=(st.catExtra||[]).filter(function(x){return x.id!==ceid;});
+  st.items=st.items.filter(function(x){return x.s!==ceid;});
+  save();closeCatPage();renderAll();return;
+ }
+ if(a==="renameSec"){
+  var sid=b.getAttribute('data-sec');
+  var s=SEC[sid];if(!s)return;
+  var cur=nm('s-'+sid,s.n);
+  var nv=prompt('Rename:',cur);if(!nv||!nv.trim())return;
+  if(!st.nm)st.nm={};
+  st.nm['s-'+sid]=nv.trim();
+  save();renderAll();
+  if(currentCat&&currentCat.indexOf('ce-')<0){$('cat-page-body').innerHTML=renderCatPage(currentCat);attachCatPageEvents();}return;
  }
  if(a==="setstore"){openStoreSheet(id);return;}
  if(a==="gmedit"){
@@ -101,6 +238,17 @@ document.addEventListener("click",function(e){
 });
 
 $("next-btn").onclick=function(){if(complete()||!tl().length){fill();save();renderAll();}};
+
+// -- DOT MENU dismiss on outside click --
+document.addEventListener('click',function(e){
+ var menu=$('dot-menu');if(!menu||menu.hidden)return;
+ if(e.target.closest('[data-a="dotmenu"]'))return;
+ if(!e.target.closest('#dot-menu')){menu.hidden=true;return;}
+ var mi=e.target.closest('[data-dmi]');if(!mi)return;
+ var idx=parseInt(mi.getAttribute('data-dmi'));
+ menu.hidden=true;
+ if(menu._fns&&menu._fns[idx])menu._fns[idx]();
+});
 
 // -- KEYBOARD --
 document.addEventListener("keydown",function(e){

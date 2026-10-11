@@ -74,20 +74,27 @@ function renderCatPage(k){
   body+='<div style="background:var(--card);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">'
    +'<div style="font-size:12px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">&#43; Add item to master list</div>'
    +'<input type="text" id="gat" placeholder="Item name…" maxlength="80" style="margin-bottom:8px;width:100%">'
-   +'<select id="gac" style="margin-bottom:10px;width:100%">'+GCAT.filter(function(c){return c[0]!=="Vegetables";}).map(function(c){return '<option value="'+c[0]+'">'+c[1]+'</option>';}).join('')+'</select>'
+   +'<select id="gac" style="margin-bottom:10px;width:100%">'+gcatAll().filter(function(c){return c[0]!=="Vegetables";}).map(function(c){return '<option value="'+c[0]+'">'+c[1]+'</option>';}).join('')+'</select>'
    +'<div style="display:flex;align-items:center;gap:10px">'
    +'<label style="flex:1;font-size:13px;color:var(--mute);display:flex;align-items:center;gap:6px"><input type="checkbox" id="gn" checked> Also add to Buy now</label>'
    +'<button data-a="gadd" style="font:800 14px Nunito,sans-serif;background:var(--acc);color:#fff;border:0;border-radius:10px;padding:10px 20px;cursor:pointer;white-space:nowrap">Add</button>'
    +'</div>'
    +'</div>';
   var core=G2('rec').filter(function(x){return CORE.indexOf(x.grp)>=0;});
-  var masterHtml=GCAT.slice(0,5).map(function(c){
+  var extraCats=st.gExtra||[];
+  var masterHtml=gcatAll().slice(0,5).map(function(c){
    var it=core.filter(function(x){return x.grp===c[0];});
    var nb=it.filter(function(x){return x.n;}).length;
    var hdr=it.length?'<div style="display:flex;align-items:center;padding:0 8px 8px;gap:14px"><span style="flex:1"></span><span style="width:72px;text-align:center;font-size:10px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.5px">Qty</span><span style="width:36px;text-align:center;font-size:10px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.5px">Store</span><span style="width:72px;text-align:center;font-size:10px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.5px">Status</span><span style="width:64px;text-align:center;font-size:10px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.5px">Actions</span></div>':'';
    return macc('gm-'+c[0],c[1]+' ('+it.length+(nb?', '+nb+' in Buy now':'')+')' ,it.length?hdr+it.map(gmRow).join(''):'<p class="note">Nothing here.</p>');
   }).join('');
-  body+=subsec('📒 Master grocery list',core.length,masterHtml);
+  masterHtml+=extraCats.map(function(e){
+   var it=st.g.filter(function(x){return x.k==='rec'&&x.grp===e.id;});
+   var nb=it.filter(function(x){return x.n;}).length;
+   var hdr=it.length?'<div style="display:flex;align-items:center;padding:0 8px 8px;gap:14px"><span style="flex:1"></span><span style="width:72px;text-align:center;font-size:10px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.5px">Qty</span><span style="width:36px;text-align:center;font-size:10px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.5px">Store</span><span style="width:72px;text-align:center;font-size:10px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.5px">Status</span><span style="width:64px;text-align:center;font-size:10px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.5px">Actions</span></div>':'';
+   return macc('gm-'+e.id,esc(e.label)+' ('+it.length+(nb?', '+nb+' in Buy now':'')+')' ,it.length?hdr+it.map(gmRow).join(''):'<p class="note">Nothing here.</p>');
+  }).join('');
+  body+=subsec('📒 Master grocery list',core.length+extraCats.reduce(function(s,e){return s+st.g.filter(function(x){return x.k==='rec'&&x.grp===e.id;}).length;},0),masterHtml);
   var nowHtml='';
   if(!pending.length){nowHtml='<p class="note">Nothing to buy right now.</p>';}
   else{
@@ -160,10 +167,35 @@ function renderCatPage(k){
    var html=a.length?a.map(function(x){return taskRow(x,false);}).join(""):'<div class="empty-state"><div class="ei">📋</div><p>Nothing waiting here</p></div>';
    html+=inlineAdd(s.id);
    if(s.note)html+='<p class="note" style="margin-top:6px">'+esc(s.note)+'</p>';
-   body+=subsec(nm("s-"+s.id,s.n),a.length,html);
+   body+=subsec(nm("s-"+s.id,s.n),a.length,html,s.id);
+  });
+  (st.secExtra||[]).filter(function(e){return e.m===k;}).forEach(function(e){
+   var a=st.items.filter(function(x){return x.s===e.id&&!x.d&&!x.today;});
+   var html=a.length?a.map(function(x){return taskRow(x,false);}).join(""):'<div class="empty-state"><div class="ei">📋</div><p>Nothing here yet</p></div>';
+   html+=inlineAdd(e.id);
+   html+='<div style="text-align:right;margin-top:4px"><button style="font-size:11px;color:var(--red);background:none;border:0;cursor:pointer;padding:4px 6px" data-a="delSecExtra" data-seid="'+e.id+'">Remove section</button></div>';
+   body+=subsec(esc(e.label),a.length,html);
   });
  }
  return body;
+}
+
+function openCatExtraPage(ceid){
+ var e=(st.catExtra||[]).filter(function(x){return x.id===ceid;})[0];if(!e)return;
+ currentCat='ce-'+ceid;
+ $("cat-page-title").textContent=esc(e.label);
+ $("cat-page-body").innerHTML=renderCatExtraPage(ceid);
+ $("cat-page").scrollTop=0;
+ $("cat-page").classList.add("open");
+ attachCatPageEvents();
+}
+function renderCatExtraPage(ceid){
+ var e=(st.catExtra||[]).filter(function(x){return x.id===ceid;})[0];if(!e)return '';
+ var a=st.items.filter(function(x){return x.s===ceid&&!x.d&&!x.today;});
+ var html=a.length?a.map(function(x){return taskRow(x,false);}).join(''):'<div class="empty-state"><div class="ei">'+esc(e.icon||'📌')+'</div><p>Nothing here yet</p></div>';
+ html+=inlineAdd(ceid);
+ html+='<div style="text-align:right;margin-top:8px"><button style="font-size:11px;color:var(--red);background:none;border:0;cursor:pointer;padding:4px 6px" data-a="delCatExtra" data-ceid="'+ceid+'">Remove category</button></div>';
+ return '<div class="subsec"><div class="subsec-title"><span>'+esc(e.label)+'</span></div>'+html+'</div>';
 }
 
 function openCatPage(k){

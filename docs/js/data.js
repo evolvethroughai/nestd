@@ -21,6 +21,7 @@ var SC=[
 var SEC={};SC.forEach(function(s){SEC[s.id]=s;});
 var CORE=["Staples / food","Household / personal","Pooja","Nuts, seeds and snacks","Fruit"];
 var GCAT=[["Staples / food","Staples / food"],["Household / personal","Household / personal"],["Pooja","Pooja"],["Fruit","Fruits"],["Nuts, seeds and snacks","Dry fruits, nuts & seeds"],["Vegetables","Vegetables (Fri/Sat)"]];
+function gcatAll(){var extra=(st&&st.gExtra)||[];return GCAT.slice(0,5).concat(extra.map(function(e){return [e.id,e.label];}));}
 var VEG=["Spinach","Aloo","Tomato","Bhindi (okra)","Carrot","Cucumber","Lemon","Bottle gourd","Brinjal","Green dark chillies","Beetroot","Broccoli","Cabbage","Capsicum","Ridge gourd","Drumstick","Pumpkin","Methi leaves","Coriander leaves"];
 var n=0;
 function I(s,t,pr){var o={id:"s"+(n++),s:s,t:t,d:false};if(pr!==undefined)o.pr=pr;return o;}
@@ -61,6 +62,10 @@ function migrate(s){
   [["Oils","Staples / food"],["Rock salt","Staples / food"],["Plain oats","Staples / food"],["Masala oats","Staples / food"],["Harpic","Household / personal"],["Pitamber","Household / personal"],["Sabena","Household / personal"]].forEach(function(a,i){if(!has(a[0]))s.g.push({id:"gr"+i+"x",t:a[0],k:"rec",grp:a[1],n:false,d:false});});
   s.vm=4;
  }
+ if(!s.gExtra)s.gExtra=[];
+ if(!s.lifeExtra)s.lifeExtra=[];
+ if(!s.secExtra)s.secExtra=[];
+ if(!s.catExtra)s.catExtra=[];
  if(!s.streak)s.streak={count:0,last:''};
  if(!s.history)s.history=[];
  if(!s.gStores)s.gStores=[];
