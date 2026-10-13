@@ -13,12 +13,9 @@
 </head>
 <body>
 <!-- SPLASH SCREEN -->
-<div id="splash" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:999;background:linear-gradient(135deg,#0a0a0a 0%,#0d1117 50%,#0a0f1e 100%);overflow:hidden;transition:opacity .6s ease">
- <canvas id="splash-canvas" style="position:absolute;top:0;left:0;z-index:1"></canvas>
- <div style="position:absolute;top:0;left:0;width:100vw;height:100vh;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:none">
-  <img src="icon-512.png" style="width:120px;height:120px;border-radius:28px;box-shadow:0 8px 40px rgba(0,0,0,.3)">
-  <div id="splash-tag" style="font:700 15px Nunito,sans-serif;color:rgba(255,255,255,.85);letter-spacing:3px;text-transform:uppercase;opacity:0;transition:opacity .8s ease">Get Sortd</div>
- </div>
+<div id="splash" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:999;background:linear-gradient(135deg,#0a0a0a 0%,#0d1117 50%,#0a0f1e 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .6s ease">
+ <img src="icon-512.png" style="width:120px;height:120px;border-radius:28px;box-shadow:0 8px 40px rgba(0,0,0,.3);opacity:0;transition:opacity .6s ease" id="splash-icon">
+ <div id="splash-tag" style="font:700 15px Nunito,sans-serif;color:rgba(255,255,255,.85);letter-spacing:3px;text-transform:uppercase;opacity:0;transition:opacity .6s ease">Get Sortd</div>
 </div>
 <div id="toast"></div>
 <div id="modal-overlay" hidden>
@@ -233,14 +230,25 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="js/data.js"></script>
-<script src="js/store.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/render.js"></script>
-<script src="js/grocery.js"></script>
-<script src="js/life.js"></script>
-<script src="js/app.js"></script>
-<script src="js/firebase.js"></script>
+<script src="js/data.js?v=2"></script>
+<script src="js/store.js?v=2"></script>
+<script src="js/ui.js?v=2"></script>
+<script src="js/render.js?v=2"></script>
+<script src="js/grocery.js?v=2"></script>
+<script src="js/life-utils.js?v=1"></script>
+<script src="js/life-bills.js?v=1"></script>
+<script src="js/life-emis.js?v=2"></script>
+<script src="js/life-chits.js?v=9"></script>
+<script src="js/life.js?v=6"></script>
+<script src="js/life-modal-core.js?v=1"></script>
+<script src="js/life-modal-chits.js?v=1"></script>
+<script src="js/life-modal-emis.js?v=1"></script>
+<script src="js/life-modal-generic.js?v=1"></script>
+<script src="js/life-events-chits.js?v=1"></script>
+<script src="js/life-events-emis.js?v=1"></script>
+<script src="js/life-events-core.js?v=1"></script>
+<script src="js/app.js?v=2"></script>
+<script src="js/firebase.js?v=2"></script>
 <script>
 var _deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',function(e){
@@ -258,46 +266,15 @@ if('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then
 // Splash
 (function(){
   var splash=document.getElementById('splash');
-  var canvas=document.getElementById('splash-canvas');
+  var icon=document.getElementById('splash-icon');
   var tag=document.getElementById('splash-tag');
-  if(!splash||!canvas)return;
-  var ctx=canvas.getContext('2d');
-  var W=canvas.width=window.innerWidth;
-  var H=canvas.height=window.innerHeight;
-  var cx=W/2, cy=H/2;
-  var ICONS=['💧','🔥','⚡','💸','🚀','🛍️','🏦','💎','🔔','✅','💊','🎨','🏡','🎯','🚘','🧾','🌱','📱','💰','🎸'];
-  var pts=ICONS.map(function(ic,i){
-    var a=(i/ICONS.length)*Math.PI*2;
-    return {ic:ic,a:a,d:Math.min(W,H)*0.46,alpha:0};
-  });
-  var t0=Date.now(),raf,tagDone=false;
-  function easeInOutQuint(t){return t<0.5?16*t*t*t*t*t:1-Math.pow(-2*t+2,5)/2;}
-  function frame(){
-    var e=Date.now()-t0;
-    ctx.clearRect(0,0,W,H);
-    pts.forEach(function(p,i){
-      var fadeT=Math.min(e/600,1);
-      var moveStart=1500+i*50;
-      var pe=Math.max(0,Math.min(1,(e-moveStart)/5500));
-      var ease=easeInOutQuint(pe);
-      p.alpha=Math.min(fadeT,1-ease);
-      if(p.alpha<0.02)return;
-      ctx.globalAlpha=p.alpha;
-      ctx.font=Math.round(54-ease*18)+'px serif';
-      ctx.textAlign='center';
-      ctx.textBaseline='middle';
-      ctx.fillText(p.ic,cx+Math.cos(p.a)*p.d*(1-ease),cy+Math.sin(p.a)*p.d*(1-ease));
-    });
-    ctx.globalAlpha=1;
-    if(e>5500&&!tagDone){tagDone=true;if(tag)tag.style.opacity='1';}
-    raf=requestAnimationFrame(frame);
-  }
-  raf=requestAnimationFrame(frame);
+  if(!splash)return;
+  setTimeout(function(){if(icon)icon.style.opacity='1';},80);
+  setTimeout(function(){if(tag)tag.style.opacity='1';},700);
   setTimeout(function(){
-    cancelAnimationFrame(raf);
     splash.style.opacity='0';
-    setTimeout(function(){splash.style.display='none';},650);
-  },8000);
+    setTimeout(function(){splash.style.display='none';},600);
+  },3200);
 })();
 </script>
 </body>

@@ -338,3 +338,47 @@ input[type=text],input[type=date],select,textarea{width:100%;font:inherit;font-s
 .cat-card.cat-add:hover{opacity:1;border-color:var(--acc)}
 .cat-card.cat-add .cc-icon{font-size:26px;font-weight:900;color:var(--acc);margin-bottom:4px}
 .cat-card.cat-add .cc-name{font-size:12px;color:var(--mute)}
+
+/* -- CHIT CARDS -- */
+.chit-summary{background:linear-gradient(135deg,var(--acc),var(--acc2));border-radius:16px;padding:16px;margin-bottom:16px;color:#fff}
+.chit-sum-row{display:flex;gap:0;justify-content:space-between}
+.chit-sum-label{font-size:11px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.chit-sum-val{font-size:22px;font-weight:900}
+.chit-card{background:var(--card);border-radius:18px;margin-bottom:14px;box-shadow:var(--shadow);overflow:hidden;border:1.5px solid var(--line)}
+.chit-card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;width:100%;background:none;border:0;text-align:left;cursor:pointer;font:inherit;color:var(--ink)}
+.chit-chev{font-size:11px;color:var(--mute);flex-shrink:0}
+.chit-card-title{font-size:16px;font-weight:800;color:var(--ink)}
+.chit-status{font-size:11px;font-weight:800;border-radius:20px;padding:3px 10px}
+.chit-status-paying{background:var(--soft);color:var(--acc)}
+.chit-status-lifted{background:#dcfce7;color:#166534}
+.chit-status-done{background:var(--line);color:var(--mute)}
+.chit-nums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;padding:0 16px 12px;border-bottom:1px solid var(--line)}
+.chit-num{text-align:center;padding:8px 4px}
+.chit-num-val{font-size:16px;font-weight:900;color:var(--ink)}
+.chit-num-lbl{font-size:10px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.chit-dates-row{display:flex;justify-content:space-between;padding:8px 16px 4px;font-size:12px;color:var(--mute);font-weight:600;border-bottom:1px solid var(--line)}
+.chit-dates-row strong{color:var(--ink);font-weight:800}
+.chit-prog-wrap{padding:12px 16px}
+.chit-prog-bar{height:8px;background:var(--line);border-radius:8px;overflow:hidden;margin-bottom:6px}
+.chit-prog-fill{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:8px;transition:width .4s ease}
+.chit-prog-meta{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--mute)}
+.chit-lifted-box{margin:0 16px 12px;background:var(--soft);border-radius:12px;padding:10px 14px}
+.chit-lifted-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:2px;padding:4px 0;font-size:13px;color:var(--mute)}
+.chit-lifted-row strong{color:var(--ink);font-weight:800;text-align:right}
+.chit-got{color:var(--acc)!important}
+.chit-card-ft{display:flex;align-items:center;gap:8px;padding:10px 16px 14px;flex-wrap:wrap}
+.chit-note{font-size:12px;color:var(--mute);font-style:italic}
+.chit-lift-btn{font:700 12px Nunito,sans-serif;background:var(--acc);color:#fff;border:0;border-radius:10px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.chit-lift-btn:hover{opacity:.85}
+:root[data-theme="dark"] .chit-status-lifted{background:#052e16;color:#4ade80}
+.chit-calc-box{background:var(--card);border-radius:18px;margin-bottom:16px;box-shadow:var(--shadow);border:1.5px solid var(--line);overflow:hidden}
+.chit-calc-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:14px;font-weight:800;color:var(--ink);cursor:pointer;user-select:none}
+.chit-calc-hd span:last-child{font-size:11px;color:var(--mute)}
+.chit-calc-inner{padding:0 16px 16px}
+.chit-calc-row{margin-bottom:8px}
+.chit-calc-row label{display:block;font-size:11px;font-weight:700;color:var(--mute);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px}
+.chit-calc-row input{width:100%;font:600 14px Nunito,sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.chit-calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:0}
+.chit-calc-btn{width:100%;font:800 13px Nunito,sans-serif;background:var(--acc);color:#fff;border:0;border-radius:10px;padding:11px;cursor:pointer;margin-top:6px}
+.chit-calc-res{background:var(--bg);border-radius:12px;padding:10px 12px;margin-top:10px}
+.chit-calc-res-hd{font-size:11px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}

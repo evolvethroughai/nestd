@@ -12,6 +12,7 @@ firebase.initializeApp(firebaseConfig);
 var _auth = firebase.auth();
 var _db = firebase.firestore();
 var _fbUser = null;
+var _unsub = null;
 
 function fbSignIn() {
   var provider = new firebase.auth.GoogleAuthProvider();
@@ -143,7 +144,7 @@ _auth.onAuthStateChanged(function(user) {
       _fbProfile = profile;
       _updateDropdown(user, profile);
       if (typeof renderAll === 'function') renderAll();
-      dbDoc.onSnapshot(function(snap) {
+      _unsub = dbDoc.onSnapshot(function(snap) {
         if (snap.exists && snap.data().json) {
           var remote = JSON.parse(snap.data().json);
           st = migrate(remote);
@@ -157,6 +158,7 @@ _auth.onAuthStateChanged(function(user) {
       toast('Synced ✓');
     }).catch(function(e){ toast('Sync error: ' + e.message); });
   } else {
+    if (_unsub) { _unsub(); _unsub = null; }
     dbDoc = null;
     _fbProfile = null;
     _updateDropdown(null, null);

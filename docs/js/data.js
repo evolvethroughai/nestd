@@ -98,6 +98,7 @@ function migrate(s){
   s.vm=5;
  }
  if(!s.emis)s.emis=[];
+ if(!s.chits)s.chits=[];
  if(!s.invest)s.invest=[];
  if(!s.health)s.health=[];
  if(!s.biz2)s.biz2={ideas:[],active:null,tasks:[]};

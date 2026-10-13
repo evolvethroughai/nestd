@@ -1,5 +1,5 @@
 // ui.js - Theme, toast, modal, swipe, focus mode
-var LIFE_TITLES={bills:'💳 Bills',emis:'🏦 EMIs & Chits',invest:'📈 Investments',health:'💊 Health',biz2:'🚀 Business'};
+var LIFE_TITLES={bills:'💳 Bills',emis:'🏦 EMIs',chits:'🤝 Chits',invest:'📈 Investments',health:'💊 Health',biz2:'🚀 Business'};
 var TBC={morning:'#f59e0b',afternoon:'#0ea5e9',evening:'#8b5cf6'};
 var TBL={morning:'Morning',afternoon:'Afternoon',evening:'Evening'};
 var TB_LABELS={morning:'☀️ Morning',afternoon:'🌤 Afternoon',evening:'🌆 Evening'};

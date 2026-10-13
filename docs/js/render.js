@@ -291,7 +291,8 @@ function renderAll(){
  if(lg){
   var LDEF=[
    {k:'bills',icon:'💳',label:'Bills',cls:'cat-bills',cnt:function(){return st.bills.filter(function(x){return !x.paid;}).length;},badge:function(){return st.bills.filter(function(x){var d=lifeDueDays(x.due);return !x.paid&&d!==null&&d<=3;}).length;}},
-   {k:'emis',icon:'🏦',label:'EMIs & Chits',cls:'cat-emis',cnt:function(){return st.emis.filter(function(x){return !x.paid;}).length;},badge:function(){return st.emis.filter(function(x){var d=lifeDueDays(x.due);return !x.paid&&d!==null&&d<=3;}).length;}},
+   {k:'emis',icon:'🏦',label:'EMIs',cls:'cat-emis',cnt:function(){return st.emis.filter(function(x){return !x.paid;}).length;},badge:function(){return st.emis.filter(function(x){var d=lifeDueDays(x.due);return !x.paid&&d!==null&&d<=3;}).length;}},
+   {k:'chits',icon:'🤝',label:'Chits',cls:'cat-emis',cnt:function(){var active=(st.chits||[]).filter(function(x){return x.status!=='done';}).length;return active;},badge:function(){return (st.chits||[]).filter(function(x){var d=lifeDueDays(x.due);return x.status!=='done'&&d!==null&&d<=3;}).length;}},
    {k:'invest',icon:'📈',label:'Investments',cls:'cat-invest',cnt:function(){return st.invest.filter(function(x){return !x.paid;}).length;},badge:function(){return 0;}},
    {k:'health',icon:'💊',label:'Health',cls:'cat-health',cnt:function(){return st.health.length;},badge:function(){return st.health.filter(function(x){var d=lifeDueDays(x.due);return d!==null&&d<=3;}).length;}},
    {k:'biz2',icon:'🚀',label:'Business',cls:'cat-biz2',cnt:function(){return st.biz2.ideas.length;},badge:function(){return 0;}}
