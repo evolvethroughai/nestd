@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Nestd — Get Sortd",
+  "short_name": "Nestd",
+  "description": "Your daily lifelines and life organizer.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f8ff",
+  "theme_color": "#4648d4",
+  "icons": [
+    { "src": "./icons/nestd-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/nestd-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

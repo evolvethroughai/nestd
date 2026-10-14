@@ -13,7 +13,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProfile,
   statusBadgeText,
 }) => {
-  const badgeLabel = statusBadgeText || (currentTab === 'today' ? 'All Sorted' : 'Get Sortd.');
+  const badgeLabel = 'Get Sortd.';
 
   return (
     <header className="sticky top-0 w-full z-40 bg-surface/85 backdrop-blur-xl border-b border-outline-variant/20 shadow-[0_1px_8px_rgba(0,0,0,0.03)] pt-safe">
