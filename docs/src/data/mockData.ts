@@ -9,7 +9,6 @@ import {
   AutomationLog,
 } from '../types';
 
-export const USER_AVATAR = '/src/assets/images/user_avatar_jeevan_1791962658260.jpg';
 export const MINDFULNESS_ANCHOR = '/src/assets/images/morning_mindfulness_anchor_1791962658077.jpg';
 
 // Initial Chits (matching docs/js/data.js & life-chits.js)

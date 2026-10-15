@@ -339,7 +339,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         <div
           data-list-section-header="groceries"
           onClick={() => toggleSection('groceries')}
-          className={`list-section-sticky group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'groceries' ? 'px-3 py-2 border border-amber-200 bg-amber-50 text-amber-950 shadow-md' : 'px-3.5 py-3.5 border border-amber-700 bg-gradient-to-r from-amber-800 via-amber-700 to-amber-600 text-white shadow-md shadow-amber-900/15 hover:shadow-lg'}`}
+          className={`list-section-sticky ${pinnedListCategory === 'groceries' ? 'is-pinned' : ''} group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'groceries' ? 'px-3 py-2 border border-amber-200 bg-amber-50 text-amber-950 shadow-md' : 'px-3.5 py-3.5 border border-amber-700 bg-gradient-to-r from-amber-800 via-amber-700 to-amber-600 text-white shadow-md shadow-amber-900/15 hover:shadow-lg'}`}
         >
           <div className="flex items-center gap-3">
             <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-300 ${pinnedListCategory === 'groceries' ? 'w-8 h-8 bg-white border border-amber-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
@@ -480,7 +480,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         <div
           data-list-section-header="lifeos"
           onClick={() => toggleSection('lifeos')}
-          className={`list-section-sticky group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'lifeos' ? 'px-3 py-2 border border-emerald-200 bg-emerald-50 text-emerald-950 shadow-md' : 'px-3.5 py-3.5 border border-emerald-700 bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-600 text-white shadow-md shadow-emerald-900/15 hover:shadow-lg'}`}
+          className={`list-section-sticky ${pinnedListCategory === 'lifeos' ? 'is-pinned' : ''} group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'lifeos' ? 'px-3 py-2 border border-emerald-200 bg-emerald-50 text-emerald-950 shadow-md' : 'px-3.5 py-3.5 border border-emerald-700 bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-600 text-white shadow-md shadow-emerald-900/15 hover:shadow-lg'}`}
         >
           <div className="flex items-center gap-3">
             <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-300 ${pinnedListCategory === 'lifeos' ? 'w-8 h-8 bg-white border border-emerald-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
@@ -804,7 +804,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         <div
           data-list-section-header="quicktasks"
           onClick={() => toggleSection('quicktasks')}
-          className={`list-section-sticky group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'quicktasks' ? 'px-3 py-2 border border-purple-200 bg-purple-50 text-purple-950 shadow-md' : 'px-3.5 py-3.5 border border-purple-700 bg-gradient-to-r from-purple-800 via-purple-700 to-purple-600 text-white shadow-md shadow-purple-900/15 hover:shadow-lg'}`}
+          className={`list-section-sticky ${pinnedListCategory === 'quicktasks' ? 'is-pinned' : ''} group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'quicktasks' ? 'px-3 py-2 border border-purple-200 bg-purple-50 text-purple-950 shadow-md' : 'px-3.5 py-3.5 border border-purple-700 bg-gradient-to-r from-purple-800 via-purple-700 to-purple-600 text-white shadow-md shadow-purple-900/15 hover:shadow-lg'}`}
         >
           <div className="flex items-center gap-3">
             <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-300 ${pinnedListCategory === 'quicktasks' ? 'w-8 h-8 bg-white border border-purple-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
@@ -918,7 +918,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
               aria-expanded={!collapsedSections[sec.id]}
               onClick={() => toggleSection(sec.id)}
               onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleSection(sec.id); } }}
-              className={`list-section-sticky flex items-center justify-between gap-3 rounded-2xl cursor-pointer select-none shadow-sm transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === sec.id ? `border ${colors.border} px-3 py-2 ${colors.itemBg} ${colors.text}` : `px-3 py-3 text-white ${colors.header}`}`}
+              className={`list-section-sticky ${pinnedListCategory === sec.id ? 'is-pinned' : ''} flex items-center justify-between gap-3 rounded-2xl cursor-pointer select-none shadow-sm transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === sec.id ? `border ${colors.border} px-3 py-2 ${colors.itemBg} ${colors.text}` : `px-3 py-3 text-white ${colors.header}`}`}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className={`rounded-xl flex items-center justify-center text-xl shrink-0 transition-all duration-300 ${pinnedListCategory === sec.id ? 'w-8 h-8 bg-white border border-black/5' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>{sec.icon}</div>

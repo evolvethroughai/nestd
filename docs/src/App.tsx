@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { fbSignIn, fbSignOut, onAuthChange, syncToFirestore, listenFirestore, User } from './firebase';
+import { fbSignIn, fbSignOut, onAuthChange, syncToFirestore, listenFirestore, listenUserProfile, saveUserProfile, User } from './firebase';
 import {
   TabType,
   TodayTask,
@@ -13,6 +13,7 @@ import {
   InvestmentItem,
   HealthItem,
   BusinessState,
+  UserProfile,
 } from './types';
 import {
   INITIAL_TODAY_TASKS,
@@ -163,6 +164,13 @@ export default function App() {
     } catch {
       return { count: 0, last: '' };
     }
+  });
+
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    name: '',
+    gender: '',
+    dateOfBirth: '',
+    settings: { showStreak: true, personalizedGreeting: true },
   });
 
   // Weekly veg reset key (Monday-anchored)
@@ -706,6 +714,7 @@ export default function App() {
   // --- FIREBASE AUTH + FIRESTORE SYNC ---
   const [fbUser, setFbUser] = useState<User | null>(null);
   const firestoreUnsubRef = useRef<(() => void) | null>(null);
+  const profileUnsubRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsubAuth = onAuthChange((user) => {
@@ -715,7 +724,31 @@ export default function App() {
         firestoreUnsubRef.current();
         firestoreUnsubRef.current = null;
       }
+      if (profileUnsubRef.current) {
+        profileUnsubRef.current();
+        profileUnsubRef.current = null;
+      }
       if (user) {
+        const accountName = user.displayName || user.email?.split('@')[0] || '';
+        setUserProfile({
+          name: accountName,
+          gender: '',
+          dateOfBirth: '',
+          settings: { showStreak: true, personalizedGreeting: true },
+        });
+        profileUnsubRef.current = listenUserProfile(user.uid, (remoteProfile) => {
+          if (!remoteProfile) return;
+          const remoteSettings = remoteProfile.settings as Partial<UserProfile['settings']> | undefined;
+          setUserProfile({
+            name: typeof remoteProfile.name === 'string' ? remoteProfile.name : accountName,
+            gender: remoteProfile.gender === 'female' || remoteProfile.gender === 'male' || remoteProfile.gender === 'non-binary' || remoteProfile.gender === 'prefer-not-to-say' ? remoteProfile.gender : '',
+            dateOfBirth: typeof remoteProfile.dateOfBirth === 'string' ? remoteProfile.dateOfBirth : '',
+            settings: {
+              showStreak: remoteSettings?.showStreak !== false,
+              personalizedGreeting: remoteSettings?.personalizedGreeting !== false,
+            },
+          });
+        });
         // Listen for remote changes and merge into local state
         firestoreUnsubRef.current = listenFirestore(user.uid, (json) => {
           try {
@@ -735,7 +768,11 @@ export default function App() {
         });
       }
     });
-    return () => { unsubAuth(); if (firestoreUnsubRef.current) firestoreUnsubRef.current(); };
+    return () => {
+      unsubAuth();
+      if (firestoreUnsubRef.current) firestoreUnsubRef.current();
+      if (profileUnsubRef.current) profileUnsubRef.current();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -758,6 +795,13 @@ export default function App() {
 
   const handleSignOut = () => {
     fbSignOut().then(() => showToast('Signed out')).catch(() => {});
+  };
+
+  const handleSaveUserProfile = async (profile: UserProfile) => {
+    if (!fbUser) return;
+    await saveUserProfile(fbUser.uid, profile);
+    setUserProfile(profile);
+    showToast('Profile saved');
   };
 
   const uncompletedTasksCount = todayTasks.filter((t) => !t.completed).length;
@@ -816,19 +860,30 @@ export default function App() {
         } h-full max-h-[100dvh] sm:h-[min(94dvh,880px)] sm:max-h-[96dvh] bg-surface flex flex-col relative sm:rounded-[36px] sm:border sm:border-slate-300/80 sm:shadow-2xl overflow-hidden transition-all duration-200`}
       >
         {/* Scrollable Content Viewport */}
-        <div ref={scrollContainerRef} onScroll={(event) => setIsHeaderCompact(event.currentTarget.scrollTop > 36)} className="app-scroll flex-1 overflow-y-auto overscroll-y-contain w-full min-h-0 flex flex-col">
+        <div
+          ref={scrollContainerRef}
+          onScroll={(event) => {
+            const scrollTop = event.currentTarget.scrollTop;
+            setIsHeaderCompact((currentlyCompact) => currentlyCompact ? scrollTop > 18 : scrollTop > 48);
+          }}
+          className="app-scroll flex-1 overflow-y-auto overscroll-y-contain w-full min-h-0 flex flex-col"
+        >
           <div key={currentTab} className="w-full flex flex-col flex-1 animate-screen-enter">
           <Header
             currentTab={currentTab}
             onOpenProfile={() => setIsProfileModalOpen(true)}
             user={fbUser}
+            profileName={userProfile.name}
             compact={isHeaderCompact}
           />
           {currentTab === 'today' && (
             <TodayScreen
               tasks={todayTasks}
               streak={streak.count}
-              userName={fbUser?.displayName || 'Jeevan'}
+              showStreak={userProfile.settings.showStreak}
+              userName={userProfile.settings.personalizedGreeting
+                ? userProfile.name || fbUser?.displayName || fbUser?.email?.split('@')[0] || 'You'
+                : 'You'}
               userPhoto={fbUser?.photoURL || undefined}
               onToggleTask={handleToggleTask}
               onAddTask={handleAddTodayTask}
@@ -1237,6 +1292,8 @@ export default function App() {
         onClose={() => setIsProfileModalOpen(false)}
         onResetData={handleResetData}
         user={fbUser}
+        profile={userProfile}
+        onSaveProfile={handleSaveUserProfile}
         streak={streak.count}
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}

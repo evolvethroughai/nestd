@@ -15,6 +15,7 @@ function getDynamicDateLabel(): string {
 interface TodayScreenProps {
   tasks: TodayTask[];
   streak: number;
+  showStreak?: boolean;
   userName?: string;
   userPhoto?: string;
   onToggleTask: (id: string) => void;
@@ -26,6 +27,7 @@ interface TodayScreenProps {
 export const TodayScreen: React.FC<TodayScreenProps> = ({
   tasks,
   streak,
+  showStreak = true,
   userName = 'You',
   userPhoto,
   onToggleTask,
@@ -133,7 +135,7 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
                 <span className="material-symbols-outlined text-[15px] text-amber-700">sunny</span>
                 {dateLabel}
               </span>
-              {streak > 0 && (
+              {showStreak && streak > 0 && (
                 <span className="px-2 py-0.5 rounded-full bg-amber-400/30 text-amber-950 font-display text-[11px] font-bold flex items-center gap-1 shadow-2xs">
                   🔥 {streak}-day streak
                 </span>

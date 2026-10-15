@@ -1,5 +1,15 @@
 export type TabType = 'today' | 'lists' | 'ask';
 
+export interface UserProfile {
+  name: string;
+  gender: 'female' | 'male' | 'non-binary' | 'prefer-not-to-say' | '';
+  dateOfBirth: string;
+  settings: {
+    showStreak: boolean;
+    personalizedGreeting: boolean;
+  };
+}
+
 export interface TodayTask {
   id: string;
   title: string;
