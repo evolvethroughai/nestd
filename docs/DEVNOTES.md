@@ -483,3 +483,43 @@ This app was built and debugged entirely using **Amazon Q Developer** inside VS 
 ### Verification and Git
 - `npm.cmd run build` passed. Vite still reports the existing large JavaScript chunk warning (>500 kB).
 - Changes were committed and pushed to `origin/studio` as `22a889a` (`feat: refine lists category actions and motion`).
+
+### Account profile, scroll behavior, and header polish
+
+**1. Account profile and settings**
+- Expanded the account modal into **My profile** and **Settings** views, with a persistent Log out action for signed-in users.
+- Added editable Name, Gender, and Date of birth fields. Profile name falls back to the signed-in account's display name or email name; removed the hardcoded Jeevan fallback and renamed the avatar asset to a generic filename.
+- Added working Today settings for personalized greeting and daily streak visibility.
+- Stored profile details and preferences in a separate Firestore document scoped under the signed-in user's UID.
+- Updated Today greeting and compact header name to use the saved profile name.
+
+**2. Lists sticky-header overlap**
+- Changed category headers so only the active category can stick beneath the Nestd app header; inactive category headers remain in normal document flow.
+- Raised the app header above the active category header and removed the sticky header backface-visibility hint that could trigger mobile compositing/layering glitches.
+
+**3. Shared Nestd header motion and compact color**
+- Reduced expanded/compact header transitions from 500 ms to 200 ms and limited animated CSS properties to reduce the sluggish feel across Today, Lists, and Sorti.
+- Added separate scroll thresholds for collapsing and expanding so the shared header does not repeatedly toggle near one cutoff.
+- Changed the compact header background from near-white `#f3f4ff` to a more visible pale indigo `#e7e9ff`.
+
+### Files updated
+| File | Changes |
+|---|---|
+| `docs/src/App.tsx` | Account profile state and sync, Today preferences, shared header scroll thresholds |
+| `docs/src/components/ProfileModal.tsx` | Profile editor, settings toggles, sign-in and Log out actions |
+| `docs/src/components/Header.tsx` | Profile name, faster transitions, compact tint, stacking order |
+| `docs/src/components/ListsScreen.tsx` | Only active category header pins during scroll |
+| `docs/src/components/TodayScreen.tsx` | Streak visibility preference |
+| `docs/src/firebase.ts` | User-scoped Firestore profile read/write helpers |
+| `docs/src/types/index.ts` | User profile and settings type |
+| `docs/src/index.css` | Active-only sticky header styles |
+| `docs/src/data/mockData.ts` | Removed obsolete personalized avatar reference |
+| `docs/src/assets/images/profile-avatar.jpg` | Renamed old user-specific avatar asset |
+| `docs/docs/` | Regenerated production app output for Pages |
+
+### Verification and Git
+- `npm.cmd run lint` passed (TypeScript check).
+- `npm.cmd run build:docs` passed; Vite continues to report the existing large JavaScript chunk warning (>500 kB).
+- Account and Lists updates were pushed to `origin/studio` in commit `6ab4e31` (`feat: improve profile and scroll behavior`).
+- The compact header tint change to `#e7e9ff` was rebuilt locally after that push and is not yet committed or pushed.
+- Firestore rules are not present in this repository; verify Firebase rules restrict reads/writes to the authenticated user's UID before storing real gender or date-of-birth details.

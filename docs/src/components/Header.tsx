@@ -15,7 +15,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, onOpenProfile, user,
   const photoURL = user?.photoURL;
 
   return (
-    <header className={`sticky top-0 w-full z-50 overflow-hidden pt-safe text-white shadow-[0_8px_24px_rgba(55,48,163,0.16)] transition-colors duration-200 ${compact ? 'bg-[#f3f4ff]' : 'bg-gradient-to-r from-indigo-800 via-primary to-violet-700'}`}>
+    <header className={`sticky top-0 w-full z-50 overflow-hidden pt-safe text-white shadow-[0_8px_24px_rgba(55,48,163,0.16)] transition-colors duration-200 ${compact ? 'bg-[#e7e9ff]' : 'bg-gradient-to-r from-indigo-800 via-primary to-violet-700'}`}>
       <div className={`pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/10 blur-2xl transition-opacity duration-200 ${compact ? 'opacity-0' : 'opacity-100'}`} />
       <div className={`relative z-10 ${compact ? 'h-[50px]' : 'h-[72px]'} px-5 max-w-md mx-auto flex items-center justify-between transition-[height] duration-200 ease-out`}>
         <div className="flex items-center gap-2.5">
