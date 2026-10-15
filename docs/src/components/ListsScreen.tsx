@@ -11,6 +11,13 @@ import {
   BusinessState,
 } from '../types';
 
+function dueDaysFromDay(dueDay: number): number {
+  const today = new Date();
+  const thisMonth = new Date(today.getFullYear(), today.getMonth(), dueDay);
+  if (thisMonth < today) thisMonth.setMonth(thisMonth.getMonth() + 1);
+  return Math.round((thisMonth.getTime() - today.setHours(0,0,0,0)) / 86400000);
+}
+
 interface ListsScreenProps {
   groceryItems: GroceryItem[];
   onToggleGroceryItem: (id: string) => void;
@@ -78,6 +85,21 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
   const activeChits = chits.filter((c) => c.status !== 'done');
   const activeEmis = emis.filter((e) => e.status !== 'closed');
   const pendingBills = bills.filter((b) => !b.paid);
+
+  // Dynamic bill summary
+  const billsTotal = pendingBills.reduce((s, b) => s + (parseFloat(b.amt || '0') || 0), 0);
+  const urgentBill = pendingBills.find((b) => !b.yearly);
+  const billDueLabel = urgentBill ? `${urgentBill.name} due soon` : `${pendingBills.length} pending`;
+
+  // Dynamic chit summary
+  const nextChit = activeChits.find((c) => !c.lifted);
+  const chitDueLabel = nextChit ? `Due ${nextChit.dueDay}th: ₹${nextChit.monthlyAmt.toLocaleString('en-IN')}` : activeChits.length > 0 ? 'All lifted' : 'No active chits';
+  const chitNames = activeChits.map((c) => c.name.split(' ').slice(0, 1).join('')).join(' & ');
+
+  // Dynamic EMI summary
+  const nextEmi = activeEmis[0];
+  const emiDueLabel = nextEmi ? `${nextEmi.dueDay}th: ₹${(nextEmi.emiAmt || 0).toLocaleString('en-IN')}` : 'No active loans';
+  const emiDaysLeft = nextEmi?.dueDay ? dueDaysFromDay(nextEmi.dueDay) : null;
 
   return (
     <div className="flex flex-col w-full max-w-md mx-auto px-4 pb-28 pt-2 space-y-5">
@@ -348,16 +370,13 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                       {activeChits.length} active
                     </span>
                     <span className="px-2 py-0.5 rounded-full bg-white/80 border border-yellow-200 text-yellow-900 text-[11px] font-medium">
-                      Shriram & Kapil
+                      {chitNames || 'No active chits'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     <span className="inline-flex items-center gap-1 text-yellow-900 text-xs font-bold bg-white/90 border border-yellow-300/60 px-2.5 py-0.5 rounded-lg shadow-2xs">
                       <span className="material-symbols-outlined text-[13px] text-yellow-700">event</span>
-                      Due 5th: ₹15,000
-                    </span>
-                    <span className="text-xs text-yellow-800 font-medium">
-                      Payout pool in 3 months
+                      {chitDueLabel}
                     </span>
                   </div>
                 </div>
@@ -402,17 +421,19 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                       Auto-debited
                     </span>
                     <span className="text-xs text-teal-800 font-medium">
-                      SBI Maxgain
+                      {nextEmi?.name.split(' ').slice(0, 2).join(' ') || 'No active loans'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     <span className="inline-flex items-center gap-1 text-teal-900 text-xs font-bold bg-white/90 border border-teal-200 px-2.5 py-0.5 rounded-lg shadow-2xs">
                       <span className="material-symbols-outlined text-[13px] text-teal-700">sync</span>
-                      10th: ₹24,800
+                      {emiDueLabel}
                     </span>
-                    <span className="text-xs text-teal-800 font-medium">
-                      Next deduction in 18d
-                    </span>
+                    {emiDaysLeft !== null && (
+                      <span className="text-xs text-teal-800 font-medium">
+                        Next deduction in {emiDaysLeft}d
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -453,7 +474,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                     </h3>
                     <span className="px-2 py-0.5 rounded-full bg-rose-200/80 text-rose-900 text-[11px] font-bold flex items-center gap-1">
                       <span className="material-symbols-outlined text-[12px] text-rose-700">priority_high</span>
-                      BESCOM due in 2d
+                      {billDueLabel}
                     </span>
                     <span className="text-xs text-rose-800 font-medium">
                       {pendingBills.length} pending
@@ -462,7 +483,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     <span className="inline-flex items-center gap-1 text-rose-900 text-xs font-bold bg-white/90 border border-rose-200 px-2.5 py-0.5 rounded-lg shadow-2xs">
                       <span className="material-symbols-outlined text-[13px] text-rose-600">bolt</span>
-                      Total: ₹3,605
+                      {billsTotal > 0 ? `Total: ₹${billsTotal.toLocaleString('en-IN')}` : 'All paid'}
                     </span>
                     <span className="text-xs text-rose-800 font-medium">
                       TGSPDCL, Gas, ACT

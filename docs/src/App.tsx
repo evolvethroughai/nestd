@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { fbSignIn, fbSignOut, onAuthChange, syncToFirestore, listenFirestore, User } from './firebase';
 import {
   TabType,
   TodayTask,
@@ -147,6 +148,63 @@ export default function App() {
     }
   });
 
+  // Streak state
+  const [streak, setStreak] = useState<{ count: number; last: string }>(() => {
+    try {
+      const saved = localStorage.getItem('nestd_streak');
+      return saved ? JSON.parse(saved) : { count: 0, last: '' };
+    } catch {
+      return { count: 0, last: '' };
+    }
+  });
+
+  // Weekly veg reset key (Monday-anchored)
+  function getWeekKey(): string {
+    const d = new Date();
+    const t = new Date(d);
+    t.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // Monday
+    return `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
+  }
+
+  function getTodayKey(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  }
+
+  // roll() — weekly veg reset + daily streak update
+  useEffect(() => {
+    const todayKey = getTodayKey();
+    const weekKey = getWeekKey();
+    const lastWeek = localStorage.getItem('nestd_week_key');
+    const lastDay = localStorage.getItem('nestd_day_key');
+
+    // Weekly reset: uncomplete all vegetables on new week
+    if (lastWeek !== weekKey) {
+      setGroceryItems((prev) =>
+        prev.map((i) => (i.group === 'Vegetables' ? { ...i, completed: false, boughtDate: undefined, boughtTimestamp: undefined } : i))
+      );
+      localStorage.setItem('nestd_week_key', weekKey);
+    }
+
+    // Daily streak: if all today tasks were completed yesterday, increment
+    if (lastDay !== todayKey) {
+      const allDone = todayTasks.length > 0 && todayTasks.every((t) => t.completed);
+      if (allDone) {
+        const yest = new Date();
+        yest.setDate(yest.getDate() - 1);
+        const yestKey = `${yest.getFullYear()}-${yest.getMonth() + 1}-${yest.getDate()}`;
+        setStreak((prev) => {
+          const newCount = (prev.last === yestKey || prev.last === todayKey) ? prev.count + 1 : 1;
+          const updated = { count: newCount, last: todayKey };
+          localStorage.setItem('nestd_streak', JSON.stringify(updated));
+          return updated;
+        });
+      }
+      localStorage.setItem('nestd_day_key', todayKey);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Modal / Drawer States
   const [activeDrawer, setActiveDrawer] = useState<
     'chits' | 'emis' | 'bills' | 'grocery-shopping' | 'grocery-veg' | 'investments' | 'health' | 'business' | null
@@ -185,10 +243,11 @@ export default function App() {
       localStorage.setItem('nestd_investments', JSON.stringify(investments));
       localStorage.setItem('nestd_health', JSON.stringify(healthItems));
       localStorage.setItem('nestd_business', JSON.stringify(business));
+      localStorage.setItem('nestd_streak', JSON.stringify(streak));
     } catch (e) {
       console.warn('Storage error', e);
     }
-  }, [todayTasks, chits, emis, bills, subBills, groceryItems, quickTasks, automations, investments, healthItems, business]);
+  }, [todayTasks, chits, emis, bills, subBills, groceryItems, quickTasks, automations, investments, healthItems, business, streak]);
 
   // Today Tasks Handlers
   const handleToggleTask = (id: string) => {
@@ -636,6 +695,63 @@ export default function App() {
     showToast('Reset all data to default repository seed.');
   };
 
+  // --- FIREBASE AUTH + FIRESTORE SYNC ---
+  const [fbUser, setFbUser] = useState<User | null>(null);
+  const firestoreUnsubRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const unsubAuth = onAuthChange((user) => {
+      setFbUser(user);
+      // Detach any previous Firestore listener
+      if (firestoreUnsubRef.current) {
+        firestoreUnsubRef.current();
+        firestoreUnsubRef.current = null;
+      }
+      if (user) {
+        // Listen for remote changes and merge into local state
+        firestoreUnsubRef.current = listenFirestore(user.uid, (json) => {
+          try {
+            const remote = JSON.parse(json);
+            if (remote.groceries) setGroceryItems(remote.groceries);
+            if (remote.chits) setChits(remote.chits);
+            if (remote.emis) setEmis(remote.emis);
+            if (remote.bills) setBills(remote.bills);
+            if (remote.subBills) setSubBills(remote.subBills);
+            if (remote.quickTasks) setQuickTasks(remote.quickTasks);
+            if (remote.investments) setInvestments(remote.investments);
+            if (remote.healthItems) setHealthItems(remote.healthItems);
+            if (remote.business) setBusiness(remote.business);
+            if (remote.todayTasks) setTodayTasks(remote.todayTasks);
+            if (remote.streak) setStreak(remote.streak);
+          } catch {}
+        });
+      }
+    });
+    return () => { unsubAuth(); if (firestoreUnsubRef.current) firestoreUnsubRef.current(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced Firestore push on any state change when signed in
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!fbUser) return;
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      syncToFirestore(fbUser.uid, {
+        groceries: groceryItems, chits, emis, bills, subBills,
+        quickTasks, investments, healthItems, business, todayTasks, streak,
+      }).catch(() => {});
+    }, 800);
+  }, [groceryItems, chits, emis, bills, subBills, quickTasks, investments, healthItems, business, todayTasks, streak, fbUser]);
+
+  const handleSignIn = () => {
+    fbSignIn().catch((e) => showToast('Sign-in failed: ' + e.message));
+  };
+
+  const handleSignOut = () => {
+    fbSignOut().then(() => showToast('Signed out')).catch(() => {});
+  };
+
   const uncompletedTasksCount = todayTasks.filter((t) => !t.completed).length;
 
   return (
@@ -695,6 +811,7 @@ export default function App() {
         <Header
           currentTab={currentTab}
           onOpenProfile={() => setIsProfileModalOpen(true)}
+          user={fbUser}
         />
 
         {/* Scrollable Content Viewport */}
@@ -702,6 +819,9 @@ export default function App() {
           {currentTab === 'today' && (
             <TodayScreen
               tasks={todayTasks}
+              streak={streak.count}
+              userName={fbUser?.displayName || 'Jeevan'}
+              userPhoto={fbUser?.photoURL || undefined}
               onToggleTask={handleToggleTask}
               onAddTask={handleAddTodayTask}
               onDeleteTask={handleDeleteTodayTask}
@@ -1101,6 +1221,10 @@ export default function App() {
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         onResetData={handleResetData}
+        user={fbUser}
+        streak={streak.count}
+        onSignIn={handleSignIn}
+        onSignOut={handleSignOut}
       />
     </div>
   );

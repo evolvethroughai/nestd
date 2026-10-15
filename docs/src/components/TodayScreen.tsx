@@ -1,9 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TodayTask } from '../types';
-import { USER_AVATAR, MINDFULNESS_ANCHOR } from '../data/mockData';
+
+function getDynamicGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function getDynamicDateLabel(): string {
+  return new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' });
+}
 
 interface TodayScreenProps {
   tasks: TodayTask[];
+  streak: number;
+  userName?: string;
+  userPhoto?: string;
   onToggleTask: (id: string) => void;
   onAddTask: (title: string, category?: string, tagType?: TodayTask['tagType'], timeOfDay?: TodayTask['timeOfDay']) => void;
   onDeleteTask: (id: string) => void;
@@ -12,16 +25,30 @@ interface TodayScreenProps {
 
 export const TodayScreen: React.FC<TodayScreenProps> = ({
   tasks,
+  streak,
+  userName = 'Jeevan',
+  userPhoto,
   onToggleTask,
   onAddTask,
   onDeleteTask,
   onOpenFocusModal,
 }) => {
   const [filter, setFilter] = useState<'all' | 'morning' | 'afternoon' | 'evening'>('all');
+  const [greeting, setGreeting] = useState(getDynamicGreeting());
+  const [dateLabel, setDateLabel] = useState(getDynamicDateLabel());
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setGreeting(getDynamicGreeting());
+      setDateLabel(getDynamicDateLabel());
+    }, 60000);
+    return () => clearInterval(t);
+  }, []);
   const [newTaskInput, setNewTaskInput] = useState('');
   const [dailyIntention, setDailyIntention] = useState('Protect 90 minutes for deep product thinking...');
   const [isEditingIntention, setIsEditingIntention] = useState(false);
   const [isListening, setIsListening] = useState(false);
+
 
   // Compute metrics
   const totalTasks = tasks.length;
@@ -71,21 +98,22 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           </div>
           <h1 className="font-display text-2xl md:text-[26px] font-extrabold text-on-surface tracking-tight leading-tight mt-0.5">
-            Good morning, Jeevan
+            {greeting}, {userName.split(' ')[0]}
           </h1>
         </div>
 
         <div className="relative">
-          <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-emerald-500/20 shadow-sm">
-            <img
-              src={USER_AVATAR}
-              alt="Jeevan"
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = 'none';
-              }}
-            />
+          <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-emerald-500/20 shadow-sm bg-primary/10 flex items-center justify-center">
+            {userPhoto ? (
+              <img
+                src={userPhoto}
+                alt={userName}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <span className="material-symbols-outlined text-primary text-[24px]">person</span>
+            )}
           </div>
           <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white" />
         </div>
@@ -103,11 +131,13 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-amber-800 text-xs font-semibold flex items-center gap-1">
                 <span className="material-symbols-outlined text-[15px] text-amber-700">sunny</span>
-                Wednesday, 15 Oct
+                {dateLabel}
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-amber-400/30 text-amber-950 font-display text-[11px] font-bold flex items-center gap-1 shadow-2xs">
-                🔥 5-day streak
-              </span>
+              {streak > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-400/30 text-amber-950 font-display text-[11px] font-bold flex items-center gap-1 shadow-2xs">
+                  🔥 {streak}-day streak
+                </span>
+              )}
             </div>
 
             <div className="pt-1.5">
