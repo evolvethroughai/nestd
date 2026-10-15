@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ChitItem,
   EmiLoanItem,
@@ -9,7 +10,64 @@ import {
   InvestmentItem,
   HealthItem,
   BusinessState,
+  CustomCategory,
+  CustomCategoryItem,
 } from '../types';
+
+const AUTO_EMOJI_RULES: Array<[RegExp, string]> = [
+  [/\b(gym|fitness|workout|exercise|training|yoga)\b/i, '🏋️'],
+  [/\b(travel|trip|flight|vacation|holiday|tour|旅)\b/i, '✈️'],
+  [/\b(finance|money|budget|bank|bill|saving|savings|expense|investment|tax)\b/i, '💰'],
+  [/\b(tech|technology|code|coding|software|computer|device|programming)\b/i, '💻'],
+  [/\b(food|meal|recipe|grocery|groceries|cook|cooking|restaurant)\b/i, '🍽️'],
+  [/\b(health|doctor|medicine|medical|clinic|appointment)\b/i, '🏥'],
+  [/\b(work|project|office|career|job|business)\b/i, '💼'],
+  [/\b(book|reading|read|study|learn|course|school|education)\b/i, '📚'],
+  [/\b(home|house|clean|repair|maintenance|rent)\b/i, '🏠'],
+  [/\b(shop|shopping|buy|purchase|wishlist)\b/i, '🛍️'],
+  [/\b(pets?|dogs?|cats?|vet(?:erinarian)?s?|animals?)\b/i, '🐾'],
+  [/\b(car|vehicle|driving|fuel|transport)\b/i, '🚗'],
+  [/\b(gard\w*|plants?|flowers?|yard|lawn)\b/i, '🌱'],
+  [/\b(baby|kids|children|family)\b/i, '👨‍👩‍👧'],
+  [/\b(gift|birthday|party|event|wedding)\b/i, '🎁'],
+  [/\b(movie|music|game|hobby|entertainment)\b/i, '🎮'],
+];
+
+export function detectAutoEmoji(text: string): string {
+  return AUTO_EMOJI_RULES.find(([pattern]) => pattern.test(text))?.[1] ?? '📋';
+}
+
+export function extractOrDetectEmoji(text: string): string {
+  if (!text) return '📋';
+  const match = text.match(/\p{Extended_Pictographic}/u);
+  if (match) return match[0];
+  return detectAutoEmoji(text);
+}
+
+const CUSTOM_COLORS: CustomCategory['colorScheme'][] = ['amber', 'emerald', 'purple', 'blue', 'rose', 'indigo', 'teal'];
+const COLOR_STYLES: Record<CustomCategory['colorScheme'], { bg: string; header: string; border: string; text: string; badge: string; check: string; itemBg: string }> = {
+  amber: { bg: 'bg-white', header: 'bg-gradient-to-r from-amber-800 to-amber-700', border: 'border-amber-200', text: 'text-amber-950', badge: 'bg-amber-100 text-amber-800', check: 'accent-amber-600', itemBg: 'bg-amber-50' },
+  emerald: { bg: 'bg-white', header: 'bg-gradient-to-r from-emerald-800 to-emerald-700', border: 'border-emerald-200', text: 'text-emerald-950', badge: 'bg-emerald-100 text-emerald-800', check: 'accent-emerald-600', itemBg: 'bg-emerald-50' },
+  purple: { bg: 'bg-white', header: 'bg-gradient-to-r from-purple-800 to-purple-700', border: 'border-purple-200', text: 'text-purple-950', badge: 'bg-purple-100 text-purple-800', check: 'accent-purple-600', itemBg: 'bg-purple-50' },
+  blue: { bg: 'bg-white', header: 'bg-gradient-to-r from-blue-800 to-blue-700', border: 'border-blue-200', text: 'text-blue-950', badge: 'bg-blue-100 text-blue-800', check: 'accent-blue-600', itemBg: 'bg-blue-50' },
+  rose: { bg: 'bg-white', header: 'bg-gradient-to-r from-rose-800 to-rose-700', border: 'border-rose-200', text: 'text-rose-950', badge: 'bg-rose-100 text-rose-800', check: 'accent-rose-600', itemBg: 'bg-rose-50' },
+  indigo: { bg: 'bg-white', header: 'bg-gradient-to-r from-indigo-800 to-indigo-700', border: 'border-indigo-200', text: 'text-indigo-950', badge: 'bg-indigo-100 text-indigo-800', check: 'accent-indigo-600', itemBg: 'bg-indigo-50' },
+  teal: { bg: 'bg-white', header: 'bg-gradient-to-r from-teal-800 to-teal-700', border: 'border-teal-200', text: 'text-teal-950', badge: 'bg-teal-100 text-teal-800', check: 'accent-teal-600', itemBg: 'bg-teal-50' },
+};
+
+const AccordionContent: React.FC<{ open: boolean; className: string; children: React.ReactNode }> = ({ open, className, children }) => (
+  <div
+    aria-hidden={!open}
+    inert={!open}
+    className={`grid overflow-hidden transition-[grid-template-rows] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+  >
+    <div className="min-h-0 overflow-hidden">
+        <div data-accordion-open={open} className={`accordion-fold-content pt-4 ${className}`}>
+        {children}
+      </div>
+    </div>
+  </div>
+);
 
 function dueDaysFromDay(dueDay: number): number {
   const today = new Date();
@@ -39,7 +97,7 @@ interface ListsScreenProps {
   quickTasks: QuickTaskCategory[];
   onOpenQuickTaskDetail: (category: QuickTaskCategory) => void;
   onOpenCreateCategory: () => void;
-  onOpenNewEntry: (type?: 'grocery' | 'chit' | 'emi' | 'bill' | 'quicktask') => void;
+  onOpenNewEntry: (type?: 'grocery' | 'chit' | 'emi' | 'bill' | 'quicktask', quickTaskCategoryId?: string) => void;
 }
 
 export const ListsScreen: React.FC<ListsScreenProps> = ({
@@ -75,7 +133,6 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
 
   type SectionKey = 'groceries' | 'lifeos' | 'quicktasks';
   type SectionLabel = { title: string; subtitle: string; icon: string };
-  type ExtraSection = SectionLabel & { id: string };
 
   const [sectionLabels, setSectionLabels] = useState<Record<SectionKey, SectionLabel>>(() => {
     try {
@@ -86,14 +143,21 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
     }
   });
 
-  const [extraSections, setExtraSections] = useState<ExtraSection[]>(() => {
+  const [extraSections, setExtraSections] = useState<CustomCategory[]>(() => {
     try {
       const saved = localStorage.getItem('nestd_extra_sections');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed.map((category) => ({
+        ...category,
+        icon: category.icon || extractOrDetectEmoji(category.title || ''),
+        colorScheme: COLOR_STYLES[category.colorScheme as CustomCategory['colorScheme']] ? category.colorScheme : 'blue',
+        items: Array.isArray(category.items) ? category.items : [],
+      })) : [];
     } catch {
       return [];
     }
   });
+  const [pinnedListCategory, setPinnedListCategory] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -107,14 +171,49 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
     } catch {}
   }, [extraSections]);
 
+  useEffect(() => {
+    const scroller = document.querySelector<HTMLElement>('.app-scroll');
+    if (!scroller) return;
+
+    let frame = 0;
+    const updatePinnedCategory = () => {
+      frame = 0;
+      const appHeader = scroller.querySelector<HTMLElement>('header');
+      const scrollerTop = scroller.getBoundingClientRect().top;
+      const appHeaderBottom = appHeader?.getBoundingClientRect().bottom ?? scrollerTop + 50;
+      const categoryOffset = Math.max(0, appHeaderBottom - scrollerTop);
+      const stickyLine = appHeaderBottom;
+      const headers = Array.from(document.querySelectorAll<HTMLElement>('[data-list-section-header]'));
+      const currentHeader = headers.filter((header) => {
+        const headerRect = header.getBoundingClientRect();
+        const section = header.closest<HTMLElement>('[data-list-category]');
+        const sectionBottom = section?.getBoundingClientRect().bottom ?? 0;
+        return headerRect.top <= stickyLine + 1 && sectionBottom > stickyLine + 48;
+      }).at(-1);
+      const nextId = currentHeader?.dataset.listSectionHeader ?? null;
+      scroller.style.setProperty('--list-sticky-top', `${categoryOffset}px`);
+      setPinnedListCategory((previous) => previous === nextId ? previous : nextId);
+    };
+
+    const scheduleUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(updatePinnedCategory);
+    };
+    scroller.addEventListener('scroll', scheduleUpdate, { passive: true });
+    scheduleUpdate();
+    return () => {
+      scroller.removeEventListener('scroll', scheduleUpdate);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [extraSections.length]);
+
   const [isManageOpen, setIsManageOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [editValue, setEditValue] = useState('');
   const [newCatName, setNewCatName] = useState('');
-  const [newCatIcon, setNewCatIcon] = useState('📋');
   const [newCatSubtitle, setNewCatSubtitle] = useState('');
-
-  const ICON_OPTIONS = ['📋', '🎯', '💡', '🔖', '📦', '🗂️', '🧩', '🌟', '🔧', '📝', '🏷️', '🎒'];
+  const [newCatColor, setNewCatColor] = useState<CustomCategory['colorScheme']>('blue');
+  const [newTaskTitles, setNewTaskTitles] = useState<Record<string, string>>({});
+  const [newTaskDetails, setNewTaskDetails] = useState<Record<string, { subtitle: string; amt: string; dueDate: string }>>({});
 
   const startEdit = (key: SectionKey) => {
     setEditingSection(key);
@@ -133,20 +232,43 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
 
   const addExtraSection = () => {
     if (!newCatName.trim()) return;
-    const newSec: ExtraSection = {
+    const newSec: CustomCategory = {
       id: `sec-${Date.now()}`,
       title: newCatName.trim(),
       subtitle: newCatSubtitle.trim() || 'Custom category',
-      icon: newCatIcon,
+      icon: extractOrDetectEmoji(newCatName),
+      colorScheme: newCatColor,
+      items: [],
     };
     setExtraSections((prev) => [...prev, newSec]);
     setNewCatName('');
     setNewCatSubtitle('');
-    setNewCatIcon('📋');
+    setNewCatColor('blue');
   };
 
   const deleteExtraSection = (id: string) => {
     setExtraSections((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const addCustomItem = (categoryId: string) => {
+    const title = (newTaskTitles[categoryId] || '').trim();
+    if (!title) return;
+    const details = newTaskDetails[categoryId] || { subtitle: '', amt: '', dueDate: '' };
+    const item: CustomCategoryItem = {
+      id: `item-${Date.now()}`, title, completed: false,
+      ...(details.subtitle.trim() ? { subtitle: details.subtitle.trim() } : {}),
+      ...(details.amt.trim() ? { amt: details.amt.trim() } : {}),
+      ...(details.dueDate ? { dueDate: new Date(`${details.dueDate}T00:00:00`).toLocaleDateString() } : {}),
+    };
+    setExtraSections((prev) => prev.map((category) => category.id === categoryId ? { ...category, items: [...category.items, item] } : category));
+    setNewTaskTitles((prev) => ({ ...prev, [categoryId]: '' }));
+    setNewTaskDetails((prev) => ({ ...prev, [categoryId]: { subtitle: '', amt: '', dueDate: '' } }));
+  };
+
+  const toggleCustomItem = (categoryId: string, itemId: string) => {
+    setExtraSections((prev) => prev.map((category) => category.id === categoryId
+      ? { ...category, items: category.items.map((item) => item.id === itemId ? { ...item, completed: !item.completed } : item) }
+      : category));
   };
 
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
@@ -186,72 +308,62 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
   const emiDaysLeft = nextEmi?.dueDay ? dueDaysFromDay(nextEmi.dueDay) : null;
 
   return (
-    <div className="flex flex-col w-full max-w-md mx-auto px-4 pb-28 pt-2 space-y-5">
+    <div className="flex flex-col w-full max-w-md mx-auto px-4 pb-28 pt-5 space-y-7">
       {/* Page Header (Title & Search/Filter) */}
-      <div className="flex items-center justify-between pt-1">
+      <div className="flex items-center justify-between gap-3 rounded-3xl border border-indigo-100 bg-gradient-to-br from-white via-white to-indigo-50 px-4 py-4 shadow-[0_8px_24px_rgba(67,56,202,0.07)]">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-display text-2xl md:text-[26px] font-extrabold text-on-surface tracking-tight leading-tight">
+            <h1 className="font-display text-[27px] md:text-[29px] font-extrabold text-on-surface tracking-tight leading-tight">
               My Lists
             </h1>
-            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-display text-xs font-bold">
-              8 lists
+            <span className="px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800 font-display text-xs font-extrabold shadow-sm">
+              {3 + extraSections.length} categories
             </span>
           </div>
-          <p className="text-xs text-on-surface-variant font-medium mt-0.5">
+          <p className="text-[12px] text-on-surface-variant font-medium mt-1">
             Personal collections & daily lifelines
           </p>
         </div>
 
         <button
           onClick={() => setIsManageOpen(true)}
-          className="w-10 h-10 rounded-2xl bg-surface-container flex items-center justify-center text-primary shadow-2xs hover:bg-surface-container-high transition-colors active:scale-95"
-          title="Manage Categories"
+          className="w-11 h-11 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/20 hover:bg-indigo-700 transition-colors active:scale-95"
+          title="Customise & Add Categories"
         >
-          <span className="material-symbols-outlined text-[20px]">menu</span>
+          <span className="material-symbols-outlined text-[20px]">tune</span>
         </button>
       </div>
 
       {/* SECTION 1: Groceries & Pantry (Collapsible Accordion) */}
-      <section className="flex flex-col space-y-3" id="section-groceries">
+      <section className="flex flex-col" id="section-groceries" data-list-category="groceries">
         <div
+          data-list-section-header="groceries"
           onClick={() => toggleSection('groceries')}
-          className="group flex items-center justify-between px-2 py-2 rounded-2xl hover:bg-amber-500/5 cursor-pointer select-none transition-colors duration-150 active:scale-[0.99]"
+          className={`list-section-sticky group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'groceries' ? 'px-3 py-2 border border-amber-200 bg-amber-50 text-amber-950 shadow-md' : 'px-3.5 py-3.5 border border-amber-700 bg-gradient-to-r from-amber-800 via-amber-700 to-amber-600 text-white shadow-md shadow-amber-900/15 hover:shadow-lg'}`}
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-300/40 flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
+            <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-300 ${pinnedListCategory === 'groceries' ? 'w-8 h-8 bg-white border border-amber-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
               {sectionLabels.groceries.icon}
             </div>
             <div>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-extrabold uppercase tracking-tight text-amber-700">
+                <span className={`font-extrabold uppercase tracking-tight transition-all duration-300 ${pinnedListCategory === 'groceries' ? 'text-[9px] text-amber-700' : 'text-[11px] text-white/80'}`}>
                   {sectionLabels.groceries.subtitle}
                 </span>
-                <span className="w-1 h-1 rounded-full bg-amber-500" />
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-900 font-bold">
+                <span className={`w-1 h-1 rounded-full ${pinnedListCategory === 'groceries' ? 'bg-amber-400' : 'bg-white/60'}`} />
+                <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${pinnedListCategory === 'groceries' ? 'bg-amber-100 text-amber-800' : 'bg-white/15 text-white'}`}>
                   {groceryItems.length} items
                 </span>
               </div>
-              <h2 className="text-xl font-bold font-display text-on-surface tracking-tight leading-none mt-0.5">
+              <h2 className={`font-bold font-display tracking-tight leading-none mt-0.5 transition-all duration-300 ${pinnedListCategory === 'groceries' ? 'text-base text-amber-950' : 'text-xl text-white'}`}>
                 {sectionLabels.groceries.title}
               </h2>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenNewEntry('grocery');
-              }}
-              className="h-8 px-3 rounded-full bg-primary text-on-primary hover:bg-primary/90 flex items-center gap-1 text-xs font-bold transition-all shadow-2xs active:scale-95"
-              title="Add Grocery Item"
-            >
-              <span className="material-symbols-outlined text-[16px]">add</span>
-              <span>Add</span>
-            </button>
             <div
-              className={`w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant transition-transform duration-300 shrink-0 ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${pinnedListCategory === 'groceries' ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-white/15 text-white hover:bg-white/25'} ${
                 collapsedSections.groceries ? '' : 'rotate-180'
               }`}
             >
@@ -261,12 +373,13 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         </div>
 
         {/* Section Cards matching #groc-grid from nestd (Category C & V) */}
-        {!collapsedSections.groceries && (
-          <div className="grid grid-cols-1 gap-3 animate-fadeIn">
+        <AccordionContent open={!collapsedSections.groceries} className="ml-2 border-l-2 border-amber-200 pl-3">
+          <p className="mb-3 pl-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-700/80">Subcategories</p>
+          <div className="grid grid-cols-1 gap-3.5">
             {/* Card 1: 🛒 Shopping & Staples (Category C) */}
             <div
               onClick={() => onOpenGroceryDetail('C')}
-              className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-amber-200 bg-white hover:border-amber-300 shadow-2xs hover:shadow-xs active:scale-[0.99]"
+              className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-amber-200 bg-gradient-to-br from-amber-50 to-white hover:border-amber-300 shadow-2xs hover:shadow-md active:scale-[0.99]"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
@@ -314,7 +427,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
             {/* Card 2: 🥬 Vegetables (Category V) */}
             <div
               onClick={() => onOpenGroceryDetail('V')}
-              className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-emerald-200 bg-white hover:border-emerald-300 shadow-2xs hover:shadow-xs active:scale-[0.99]"
+              className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white hover:border-emerald-300 shadow-2xs hover:shadow-md active:scale-[0.99]"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
@@ -359,49 +472,39 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
               </div>
             </div>
           </div>
-        )}
+        </AccordionContent>
       </section>
 
       {/* SECTION 2: Life OS (Commitments & Wealth) */}
-      <section className="flex flex-col space-y-3 pt-1" id="section-lifeos">
+      <section className="flex flex-col pt-1" id="section-lifeos" data-list-category="lifeos">
         <div
+          data-list-section-header="lifeos"
           onClick={() => toggleSection('lifeos')}
-          className="group flex items-center justify-between px-2 py-2 rounded-2xl hover:bg-emerald-500/5 cursor-pointer select-none transition-colors duration-150 active:scale-[0.99]"
+          className={`list-section-sticky group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'lifeos' ? 'px-3 py-2 border border-emerald-200 bg-emerald-50 text-emerald-950 shadow-md' : 'px-3.5 py-3.5 border border-emerald-700 bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-600 text-white shadow-md shadow-emerald-900/15 hover:shadow-lg'}`}
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-300/50 flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
+            <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-300 ${pinnedListCategory === 'lifeos' ? 'w-8 h-8 bg-white border border-emerald-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
               {sectionLabels.lifeos.icon}
             </div>
             <div>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-extrabold uppercase tracking-tight text-emerald-700">
+                <span className={`font-extrabold uppercase tracking-tight transition-all duration-300 ${pinnedListCategory === 'lifeos' ? 'text-[9px] text-emerald-700' : 'text-[11px] text-white/80'}`}>
                   {sectionLabels.lifeos.subtitle}
                 </span>
-                <span className="w-1 h-1 rounded-full bg-emerald-500" />
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+                <span className={`w-1 h-1 rounded-full ${pinnedListCategory === 'lifeos' ? 'bg-emerald-400' : 'bg-white/60'}`} />
+                <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${pinnedListCategory === 'lifeos' ? 'bg-emerald-100 text-emerald-800' : 'bg-white/15 text-white'}`}>
                   Peace of mind
                 </span>
               </div>
-              <h2 className="text-xl font-bold font-display text-on-surface tracking-tight leading-none mt-0.5">
+              <h2 className={`font-bold font-display tracking-tight leading-none mt-0.5 transition-all duration-300 ${pinnedListCategory === 'lifeos' ? 'text-base text-emerald-950' : 'text-xl text-white'}`}>
                 {sectionLabels.lifeos.title}
               </h2>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenNewEntry('chit');
-              }}
-              className="h-8 px-3 rounded-full bg-surface-container-high hover:bg-surface-container flex items-center gap-1 text-primary text-xs font-bold transition-colors shadow-2xs active:scale-95"
-              title="New Ledger Entry"
-            >
-              <span className="material-symbols-outlined text-[16px]">add</span>
-              <span>New entry</span>
-            </button>
             <div
-              className={`w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant transition-transform duration-300 shrink-0 ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${pinnedListCategory === 'lifeos' ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-white/15 text-white hover:bg-white/25'} ${
                 collapsedSections.lifeos ? '' : 'rotate-180'
               }`}
             >
@@ -411,14 +514,15 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         </div>
 
         {/* Section Cards */}
-        {!collapsedSections.lifeos && (
-          <div className="grid grid-cols-1 gap-3 animate-fadeIn">
+        <AccordionContent open={!collapsedSections.lifeos} className="ml-2 border-l-2 border-emerald-200 pl-3">
+          <p className="mb-3 pl-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-emerald-700/80">Subcategories</p>
+          <div className="grid grid-cols-1 gap-3.5">
             {/* Card 1: Rich Golden Saffron Chit Fund Theme */}
             <div
               onClick={onOpenChits}
               className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-yellow-300/70 shadow-[0_4px_20px_-4px_rgba(234,179,8,0.14)] active:scale-[0.99] flex items-center justify-between"
               style={{
-                background: 'linear-gradient(135deg, #fefce8 0%, #fef9c3 50%, #fef08a 100%)',
+                background: 'linear-gradient(135deg, #fffbeb 0%, #fffdf7 55%, #ffffff 100%)',
               }}
             >
               <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -468,7 +572,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
               onClick={onOpenEmis}
               className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-teal-200/70 shadow-[0_4px_20px_-4px_rgba(20,184,166,0.12)] active:scale-[0.99] flex items-center justify-between"
               style={{
-                background: 'linear-gradient(135deg, #f0fdfa 0%, #e6fffa 50%, #ccfbf1 100%)',
+                background: 'linear-gradient(135deg, #f0fdfa 0%, #f8fdfb 55%, #ffffff 100%)',
               }}
             >
               <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -524,7 +628,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
               onClick={onOpenBills}
               className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-rose-200/70 shadow-[0_4px_20px_-4px_rgba(244,63,94,0.12)] active:scale-[0.99] flex items-center justify-between"
               style={{
-                background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 50%, #fecdd3 100%)',
+                background: 'linear-gradient(135deg, #fff1f2 0%, #fff8f8 55%, #ffffff 100%)',
               }}
             >
               <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -579,7 +683,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
               onClick={onOpenInvestments}
               className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-emerald-200/70 shadow-[0_4px_20px_-4px_rgba(16,185,129,0.12)] active:scale-[0.99] flex items-center justify-between"
               style={{
-                background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%)',
+                background: 'linear-gradient(135deg, #ecfdf5 0%, #f7fcf9 55%, #ffffff 100%)',
               }}
             >
               <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -619,7 +723,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
               onClick={onOpenHealth}
               className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-purple-200/70 shadow-[0_4px_20px_-4px_rgba(168,85,247,0.12)] active:scale-[0.99] flex items-center justify-between"
               style={{
-                background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 50%, #e9d5ff 100%)',
+                background: 'linear-gradient(135deg, #faf5ff 0%, #fcfaff 55%, #ffffff 100%)',
               }}
             >
               <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -658,7 +762,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
               onClick={onOpenBusiness}
               className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-indigo-200/70 shadow-[0_4px_20px_-4px_rgba(99,102,241,0.12)] active:scale-[0.99] flex items-center justify-between"
               style={{
-                background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 50%, #c7d2fe 100%)',
+                background: 'linear-gradient(135deg, #eef2ff 0%, #f8f9ff 55%, #ffffff 100%)',
               }}
             >
               <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -692,48 +796,39 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
               </div>
             </div>
           </div>
-        )}
+        </AccordionContent>
       </section>
 
       {/* SECTION 3: Quick Tasks (Collapsible Accordion) */}
-      <section className="flex flex-col space-y-3 pt-1" id="section-quicktasks">
+      <section className="flex flex-col pt-1" id="section-quicktasks" data-list-category="quicktasks">
         <div
+          data-list-section-header="quicktasks"
           onClick={() => toggleSection('quicktasks')}
-          className="group flex items-center justify-between px-2 py-2 rounded-2xl hover:bg-purple-500/5 cursor-pointer select-none transition-colors duration-150 active:scale-[0.99]"
+          className={`list-section-sticky group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'quicktasks' ? 'px-3 py-2 border border-purple-200 bg-purple-50 text-purple-950 shadow-md' : 'px-3.5 py-3.5 border border-purple-700 bg-gradient-to-r from-purple-800 via-purple-700 to-purple-600 text-white shadow-md shadow-purple-900/15 hover:shadow-lg'}`}
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-100 border border-purple-200/80 flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
+            <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-300 ${pinnedListCategory === 'quicktasks' ? 'w-8 h-8 bg-white border border-purple-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
               {sectionLabels.quicktasks.icon}
             </div>
             <div>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-extrabold uppercase tracking-tight text-purple-700">
+                <span className={`font-extrabold uppercase tracking-tight transition-all duration-300 ${pinnedListCategory === 'quicktasks' ? 'text-[9px] text-purple-700' : 'text-[11px] text-white/80'}`}>
                   {sectionLabels.quicktasks.subtitle}
                 </span>
-                <span className="w-1 h-1 rounded-full bg-purple-600" />
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-600/10 text-purple-800 font-bold">
+                <span className={`w-1 h-1 rounded-full ${pinnedListCategory === 'quicktasks' ? 'bg-purple-400' : 'bg-white/60'}`} />
+                <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${pinnedListCategory === 'quicktasks' ? 'bg-purple-100 text-purple-800' : 'bg-white/15 text-white'}`}>
                   {quickTasks.reduce((acc, q) => acc + q.tasksCount, 0)} active
                 </span>
               </div>
-              <h2 className="text-xl font-bold font-display text-on-surface tracking-tight leading-none mt-0.5">
+              <h2 className={`font-bold font-display tracking-tight leading-none mt-0.5 transition-all duration-300 ${pinnedListCategory === 'quicktasks' ? 'text-base text-purple-950' : 'text-xl text-white'}`}>
                 {sectionLabels.quicktasks.title}
               </h2>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenNewEntry('quicktask');
-              }}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container bg-surface-container-high/60 transition-colors shadow-2xs active:scale-95"
-              title="More options"
-            >
-              <span className="material-symbols-outlined text-[20px]">more_horiz</span>
-            </button>
             <div
-              className={`w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant transition-transform duration-300 shrink-0 ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${pinnedListCategory === 'quicktasks' ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-white/15 text-white hover:bg-white/25'} ${
                 collapsedSections.quicktasks ? '' : 'rotate-180'
               }`}
             >
@@ -743,15 +838,16 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         </div>
 
         {/* 3-Column Subcards */}
-        {!collapsedSections.quicktasks && (
-          <div className="grid grid-cols-3 gap-3 animate-fadeIn">
+        <AccordionContent open={!collapsedSections.quicktasks} className="ml-2 border-l-2 border-purple-200 pl-3">
+          <p className="mb-3 pl-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-purple-700/80">Subcategories</p>
+          <div className="grid grid-cols-3 gap-3">
             {quickTasks.map((category) => {
               const bgGradient =
                 category.colorScheme === 'blue'
-                  ? 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)'
+                  ? 'linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)'
                   : category.colorScheme === 'emerald'
-                  ? 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)'
-                  : 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)';
+                  ? 'linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%)'
+                  : 'linear-gradient(135deg, #faf5ff 0%, #ffffff 100%)';
 
               const borderColor =
                 category.colorScheme === 'blue'
@@ -784,7 +880,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onOpenNewEntry('quicktask');
+                      onOpenNewEntry('quicktask', category.id);
                     }}
                     className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/80 text-on-surface-variant shadow-2xs flex items-center justify-center hover:bg-primary hover:text-white transition-all"
                     title={`Add Task to ${category.name}`}
@@ -807,44 +903,62 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
               );
             })}
           </div>
-        )}
+        </AccordionContent>
       </section>
 
       {/* Extra custom sections */}
-      {extraSections.map((sec) => (
-        <section key={sec.id} className="flex flex-col space-y-3 pt-1">
-          <div className="flex items-center justify-between px-2 py-2 rounded-2xl bg-surface-container/40">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-xl shadow-2xs shrink-0">
-                {sec.icon}
+      {extraSections.map((sec) => {
+        const colors = COLOR_STYLES[sec.colorScheme] || COLOR_STYLES.blue;
+        return (
+          <section key={sec.id} data-list-category={sec.id} className={`flex flex-col space-y-1 rounded-3xl border p-3 shadow-sm ${colors.bg} ${colors.border}`}>
+            <div
+              data-list-section-header={sec.id}
+              role="button"
+              tabIndex={0}
+              aria-expanded={!collapsedSections[sec.id]}
+              onClick={() => toggleSection(sec.id)}
+              onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleSection(sec.id); } }}
+              className={`list-section-sticky flex items-center justify-between gap-3 rounded-2xl cursor-pointer select-none shadow-sm transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === sec.id ? `border ${colors.border} px-3 py-2 ${colors.itemBg} ${colors.text}` : `px-3 py-3 text-white ${colors.header}`}`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`rounded-xl flex items-center justify-center text-xl shrink-0 transition-all duration-300 ${pinnedListCategory === sec.id ? 'w-8 h-8 bg-white border border-black/5' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>{sec.icon}</div>
+                <div className="min-w-0">
+                  <span className={`font-extrabold uppercase tracking-tight transition-all duration-300 ${pinnedListCategory === sec.id ? 'text-[9px] opacity-70' : 'text-[11px] text-white/80'}`}>{sec.subtitle}</span>
+                  <h2 className={`font-bold font-display tracking-tight leading-tight transition-all duration-300 ${pinnedListCategory === sec.id ? 'text-base' : 'text-xl text-white'}`}>{sec.title}</h2>
+                </div>
               </div>
-              <div>
-                <span className="text-[11px] font-extrabold uppercase tracking-tight text-slate-500">
-                  {sec.subtitle}
-                </span>
-                <h2 className="text-xl font-bold font-display text-on-surface tracking-tight leading-none mt-0.5">
-                  {sec.title}
-                </h2>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`px-2 py-1 rounded-full text-[11px] font-bold ${pinnedListCategory === sec.id ? 'bg-white text-current' : 'bg-white/15 text-white'}`}>{sec.items.filter((item) => !item.completed).length} open</span>
+                <span className={`material-symbols-outlined transition-transform duration-300 ${collapsedSections[sec.id] ? '' : 'rotate-180'}`}>keyboard_arrow_down</span>
               </div>
             </div>
-            <span className="text-xs text-slate-400 font-medium px-2">Coming soon</span>
-          </div>
-        </section>
-      ))}
-
-      {/* Bottom Action: + Create New List or Category */}
-      <button
-        onClick={() => setIsManageOpen(true)}
-        className="w-full py-3.5 rounded-2xl bg-surface-container-high/60 hover:bg-surface-container border border-outline-variant/30 active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-primary font-display text-sm font-semibold shadow-2xs group"
-      >
-        <div className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xs">
-          <span className="material-symbols-outlined text-[18px]">add</span>
-        </div>
-        <span>+ Manage Categories</span>
-      </button>
+            <AccordionContent open={!collapsedSections[sec.id]} className={`ml-2 border-l-2 pl-3 ${colors.border}`}>
+              <p className="mb-3 pl-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500">Items</p>
+              <div className="space-y-2">
+              {sec.items.map((item) => (
+                <label key={item.id} className={`flex items-start gap-3 rounded-xl px-3 py-2.5 cursor-pointer ${colors.itemBg}`}>
+                  <input type="checkbox" checked={item.completed} onChange={() => toggleCustomItem(sec.id, item.id)} className={`mt-1 h-4 w-4 ${colors.check}`} />
+                  <span className="min-w-0 flex-1">
+                    <span className={`block text-sm font-semibold ${item.completed ? 'line-through text-slate-400' : colors.text}`}>{item.title}</span>
+                    {(item.subtitle || item.amt || item.dueDate) && <span className="block text-xs text-slate-500 mt-0.5">{[item.subtitle, item.amt, item.dueDate].filter(Boolean).join(' · ')}</span>}
+                  </span>
+                </label>
+              ))}
+              </div>
+              <form onSubmit={(event) => { event.preventDefault(); addCustomItem(sec.id); }} className="mt-3 grid grid-cols-2 gap-2">
+              <input value={newTaskTitles[sec.id] || ''} onChange={(event) => setNewTaskTitles((prev) => ({ ...prev, [sec.id]: event.target.value }))} placeholder="Item name" className="col-span-2 min-w-0 rounded-xl border border-white bg-white/85 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+              <input value={newTaskDetails[sec.id]?.subtitle || ''} onChange={(event) => setNewTaskDetails((prev) => ({ ...prev, [sec.id]: { subtitle: event.target.value, amt: prev[sec.id]?.amt || '', dueDate: prev[sec.id]?.dueDate || '' } }))} placeholder="Note (optional)" className="min-w-0 rounded-xl border border-white bg-white/85 px-3 py-2 text-xs outline-none" />
+              <input value={newTaskDetails[sec.id]?.amt || ''} onChange={(event) => setNewTaskDetails((prev) => ({ ...prev, [sec.id]: { subtitle: prev[sec.id]?.subtitle || '', amt: event.target.value, dueDate: prev[sec.id]?.dueDate || '' } }))} placeholder="Amount (optional)" className="min-w-0 rounded-xl border border-white bg-white/85 px-3 py-2 text-xs outline-none" />
+              <input type="date" value={newTaskDetails[sec.id]?.dueDate || ''} onChange={(event) => setNewTaskDetails((prev) => ({ ...prev, [sec.id]: { subtitle: prev[sec.id]?.subtitle || '', amt: prev[sec.id]?.amt || '', dueDate: event.target.value } }))} className="min-w-0 rounded-xl border border-white bg-white/85 px-3 py-2 text-xs outline-none" />
+              <button type="submit" disabled={!(newTaskTitles[sec.id] || '').trim()} className="flex items-center justify-center gap-1 rounded-xl bg-white text-primary disabled:opacity-40" title="Add item"><span className="material-symbols-outlined text-[18px]">add</span><span className="text-xs font-bold">Add item</span></button>
+              </form>
+            </AccordionContent>
+          </section>
+        );
+      })}
 
       {/* Manage Categories Bottom Sheet */}
-      {isManageOpen && (
+      {isManageOpen && createPortal((
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm animate-fadeIn"
           onClick={() => { setIsManageOpen(false); setEditingSection(null); }}
@@ -856,8 +970,8 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-100">
               <div>
-                <h3 className="font-display font-extrabold text-base text-slate-900">Manage Categories</h3>
-                <p className="text-[11px] text-slate-400 font-medium mt-0.5">Rename or add main sections</p>
+                <h3 className="font-display font-extrabold text-base text-slate-900">Customise Categories</h3>
+                <p className="text-[11px] text-slate-400 font-medium mt-0.5">Rename sections or create personalised lists</p>
               </div>
               <button
                 onClick={() => { setIsManageOpen(false); setEditingSection(null); }}
@@ -921,24 +1035,9 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                 </div>
               ))}
 
-              {/* Add new section */}
+              {/* Add a personalised category. Its icon is detected from the name. */}
               <div className="pt-2 border-t border-slate-100">
                 <p className="text-[11px] font-extrabold uppercase tracking-tight text-slate-400 mb-2">Add New Category</p>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {ICON_OPTIONS.map((ic) => (
-                    <button
-                      key={ic}
-                      onClick={() => setNewCatIcon(ic)}
-                      className={`w-9 h-9 rounded-xl text-xl flex items-center justify-center transition-all ${
-                        newCatIcon === ic
-                          ? 'bg-primary/15 border-2 border-primary scale-110'
-                          : 'bg-slate-100 border border-slate-200 hover:bg-slate-200'
-                      }`}
-                    >
-                      {ic}
-                    </button>
-                  ))}
-                </div>
                 <input
                   value={newCatName}
                   onChange={(e) => setNewCatName(e.target.value)}
@@ -951,6 +1050,16 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                   placeholder="Subtitle (optional)"
                   className="w-full text-sm text-slate-900 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-primary mb-3"
                 />
+                <p className="text-xs font-semibold text-slate-600 mb-2">Color theme</p>
+                <div className="flex gap-2 mb-3">
+                  {CUSTOM_COLORS.map((color) => (
+                    <button key={color} type="button" aria-label={`${color} theme`} title={`${color} theme`} onClick={() => setNewCatColor(color)} className={`h-8 w-8 rounded-full border-2 ${COLOR_STYLES[color].bg} ${COLOR_STYLES[color].border} ${newCatColor === color ? 'ring-2 ring-primary ring-offset-2' : ''}`} />
+                  ))}
+                </div>
+                <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 mb-3">
+                  <span className="text-2xl" aria-hidden="true">{extractOrDetectEmoji(newCatName)}</span>
+                  <span className="text-xs text-slate-600">{newCatName.trim() ? 'Suggested icon for this category' : 'Type a category name to suggest an icon. You can also include an emoji.'}</span>
+                </div>
                 <button
                   onClick={addExtraSection}
                   disabled={!newCatName.trim()}
@@ -962,7 +1071,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 };
