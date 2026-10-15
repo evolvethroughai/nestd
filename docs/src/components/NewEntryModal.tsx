@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { QuickTaskCategory } from '../types';
 
 interface NewEntryModalProps {
   isOpen: boolean;
   initialType?: 'grocery' | 'lifeos' | 'quicktask' | 'category';
+  initialQuickTaskCategoryId?: string;
   quickTaskCategories: QuickTaskCategory[];
   onAddGrocery: (name: string, store: string, category: 'pantry' | 'vegetables') => void;
   onAddLifeOSEntry: (title: string, subtitle: string, amount: string, dueInfo: string) => void;
@@ -15,6 +16,7 @@ interface NewEntryModalProps {
 export const NewEntryModal: React.FC<NewEntryModalProps> = ({
   isOpen,
   initialType = 'grocery',
+  initialQuickTaskCategoryId,
   quickTaskCategories,
   onAddGrocery,
   onAddLifeOSEntry,
@@ -32,10 +34,18 @@ export const NewEntryModal: React.FC<NewEntryModalProps> = ({
   const [categoryType, setCategoryType] = useState<'pantry' | 'vegetables'>('pantry');
   const [store, setStore] = useState('Ratnadeep');
   const [selectedQuickTaskCat, setSelectedQuickTaskCat] = useState(
-    quickTaskCategories[0]?.id || ''
+    initialQuickTaskCategoryId || quickTaskCategories[0]?.id || ''
   );
   const [categoryIcon, setCategoryIcon] = useState('🎯');
   const [categoryColor, setCategoryColor] = useState<'blue' | 'emerald' | 'purple'>('blue');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setEntryType(initialType);
+    setSelectedQuickTaskCat(initialQuickTaskCategoryId || quickTaskCategories[0]?.id || '');
+    setTitle('');
+    setExtra('');
+  }, [isOpen, initialType, initialQuickTaskCategoryId, quickTaskCategories]);
 
   if (!isOpen) return null;
 
@@ -46,7 +56,7 @@ export const NewEntryModal: React.FC<NewEntryModalProps> = ({
     if (entryType === 'grocery') {
       onAddGrocery(title.trim(), store, categoryType);
     } else if (entryType === 'lifeos') {
-      onAddLifeOSEntry(title.trim(), extra || 'Private ledger', extra ? `₹${extra}` : 'Active', extra ? `Due: ₹${extra}` : 'Monthly');
+      onAddLifeOSEntry(title.trim(), 'Private ledger', extra, 'Monthly');
     } else if (entryType === 'quicktask') {
       onAddQuickTask(selectedQuickTaskCat || quickTaskCategories[0]?.id, title.trim());
     } else if (entryType === 'category') {
@@ -98,7 +108,7 @@ export const NewEntryModal: React.FC<NewEntryModalProps> = ({
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              🌱 Life OS
+              Chit
             </button>
             <button
               type="button"
@@ -120,7 +130,7 @@ export const NewEntryModal: React.FC<NewEntryModalProps> = ({
               {entryType === 'grocery'
                 ? 'Item Name'
                 : entryType === 'lifeos'
-                ? 'Commitment / Bill Name'
+                ? 'Chit / savings name'
                 : entryType === 'category'
                 ? 'Category Name'
                 : 'Task Title'}
@@ -133,7 +143,7 @@ export const NewEntryModal: React.FC<NewEntryModalProps> = ({
                 entryType === 'grocery'
                   ? 'e.g. Greek Yogurt or Avocados'
                   : entryType === 'lifeos'
-                  ? 'e.g. Internet Broadband or Car EMI'
+                  ? 'e.g. Monthly savings circle'
                   : entryType === 'category'
                   ? 'e.g. Health & Wellness'
                   : 'e.g. Follow up on design feedback'
@@ -176,13 +186,16 @@ export const NewEntryModal: React.FC<NewEntryModalProps> = ({
           {entryType === 'lifeos' && (
             <div>
               <label className="block text-xs font-semibold text-on-surface mb-1">
-                Amount / Provider Note (Optional)
+                Monthly contribution
               </label>
               <input
-                type="text"
+                type="number"
+                min="1"
+                step="any"
+                required
                 value={extra}
                 onChange={(e) => setExtra(e.target.value)}
-                placeholder="e.g. 1500 or Monthly SIP"
+                placeholder="e.g. 1500"
                 className="w-full bg-surface-container-low px-3.5 py-2 rounded-xl text-xs text-on-surface border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>

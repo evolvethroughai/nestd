@@ -180,3 +180,22 @@ export interface AutomationLog {
   timeAgo: string;
   timestamp: number;
 }
+
+// --- CUSTOM PERSONALIZED CATEGORIES ---
+export interface CustomCategoryItem {
+  id: string;
+  title: string;
+  completed: boolean;
+  subtitle?: string;
+  amt?: string;
+  dueDate?: string;
+}
+
+export interface CustomCategory {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  colorScheme: 'amber' | 'emerald' | 'purple' | 'blue' | 'rose' | 'indigo' | 'teal';
+  items: CustomCategoryItem[];
+}

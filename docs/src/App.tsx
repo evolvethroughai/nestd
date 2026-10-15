@@ -45,8 +45,15 @@ import { HealthManager } from './components/HealthManager';
 import { BusinessManager } from './components/BusinessManager';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<TabType>('lists');
+  const [currentTab, setCurrentTab] = useState<TabType>('today');
+  const [isHeaderCompact, setIsHeaderCompact] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [viewMode, setViewMode] = useState<'phone' | 'phone-max' | 'fluid'>('phone-max');
+
+  useEffect(() => {
+    setIsHeaderCompact(false);
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentTab]);
 
   // Core Data States with localStorage persistence (jt-v5 matching devnotes)
   const [todayTasks, setTodayTasks] = useState<TodayTask[]>(() => {
@@ -215,6 +222,7 @@ export default function App() {
   const [newEntryModalConfig, setNewEntryModalConfig] = useState<{
     isOpen: boolean;
     initialType?: 'grocery' | 'lifeos' | 'quicktask' | 'category';
+    quickTaskCategoryId?: string;
   }>({ isOpen: false });
 
   const [quickTaskModalCat, setQuickTaskModalCat] = useState<QuickTaskCategory | null>(null);
@@ -807,15 +815,15 @@ export default function App() {
             : 'max-w-md'
         } h-full max-h-[100dvh] sm:h-[min(94dvh,880px)] sm:max-h-[96dvh] bg-surface flex flex-col relative sm:rounded-[36px] sm:border sm:border-slate-300/80 sm:shadow-2xl overflow-hidden transition-all duration-200`}
       >
-        {/* Top Header */}
-        <Header
-          currentTab={currentTab}
-          onOpenProfile={() => setIsProfileModalOpen(true)}
-          user={fbUser}
-        />
-
         {/* Scrollable Content Viewport */}
-        <div className="flex-1 overflow-y-auto overscroll-contain w-full min-h-0 flex flex-col">
+        <div ref={scrollContainerRef} onScroll={(event) => setIsHeaderCompact(event.currentTarget.scrollTop > 36)} className="app-scroll flex-1 overflow-y-auto overscroll-y-contain w-full min-h-0 flex flex-col">
+          <div key={currentTab} className="w-full flex flex-col flex-1 animate-screen-enter">
+          <Header
+            currentTab={currentTab}
+            onOpenProfile={() => setIsProfileModalOpen(true)}
+            user={fbUser}
+            compact={isHeaderCompact}
+          />
           {currentTab === 'today' && (
             <TodayScreen
               tasks={todayTasks}
@@ -855,8 +863,12 @@ export default function App() {
               onOpenCreateCategory={() =>
                 setNewEntryModalConfig({ isOpen: true, initialType: 'category' })
               }
-              onOpenNewEntry={(type) =>
-                setNewEntryModalConfig({ isOpen: true, initialType: 'lifeos' })
+              onOpenNewEntry={(type, quickTaskCategoryId) =>
+                setNewEntryModalConfig({
+                  isOpen: true,
+                  initialType: type === 'grocery' ? 'grocery' : type === 'quicktask' ? 'quicktask' : 'lifeos',
+                  quickTaskCategoryId,
+                })
               }
             />
           )}
@@ -868,6 +880,7 @@ export default function App() {
               onNavigateTab={(tab) => setCurrentTab(tab)}
             />
           )}
+          </div>
         </div>
 
         {/* Persistent Toast Feedback Banner */}
@@ -1195,15 +1208,17 @@ export default function App() {
       <NewEntryModal
         isOpen={newEntryModalConfig.isOpen}
         initialType={newEntryModalConfig.initialType}
+        initialQuickTaskCategoryId={newEntryModalConfig.quickTaskCategoryId}
         quickTaskCategories={quickTasks}
         onAddGrocery={(name, store, cat) =>
           handleAddGroceryItem(name, cat === 'pantry' ? 'Staples / food' : 'Vegetables', store, true)
         }
         onAddLifeOSEntry={(title, _sub, amount) => {
+          const monthlyAmount = Number(amount);
           handleAddChit({
             name: title,
-            monthlyAmt: parseFloat(amount) || 10000,
-            pot: (parseFloat(amount) || 10000) * 25,
+            monthlyAmt: monthlyAmount,
+            pot: monthlyAmount * 25,
             totalMonths: 25,
             startDate: new Date().toISOString().slice(0, 10),
             dueDay: 5,

@@ -304,7 +304,7 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
 
       {/* Today's Focus List Section */}
       <section className="space-y-2.5 pt-1">
-        <div className="flex items-center justify-between">
+        <div className="sticky top-[50px] z-30 -mx-2 flex items-center justify-between rounded-2xl border border-indigo-100 bg-[#f3f4ff]/95 px-3 py-2 shadow-sm backdrop-blur-md">
           <div className="flex items-center gap-2">
             <h2 className="font-display text-lg font-bold text-on-surface tracking-tight">
               Today's focus
