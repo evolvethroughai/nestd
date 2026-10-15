@@ -9,7 +9,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentTab, onOpenProfile, user }) => {
-  const firstName = user?.displayName?.split(' ')[0] || 'Jeevan';
+  const firstName = user?.displayName?.split(' ')[0];
   const photoURL = user?.photoURL;
 
   return (
@@ -31,9 +31,11 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, onOpenProfile, user 
           title="Profile & Settings"
         >
           <div className="text-right hidden sm:block">
-            <span className="block text-xs font-semibold text-on-surface leading-none">
-              {firstName}
-            </span>
+            {firstName && (
+              <span className="block text-xs font-semibold text-on-surface leading-none">
+                {firstName}
+              </span>
+            )}
             {user && (
               <span className="block text-[10px] text-emerald-600 font-medium leading-none mt-0.5">
                 Synced ✓

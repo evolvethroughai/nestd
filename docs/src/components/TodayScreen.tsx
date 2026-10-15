@@ -26,7 +26,7 @@ interface TodayScreenProps {
 export const TodayScreen: React.FC<TodayScreenProps> = ({
   tasks,
   streak,
-  userName = 'Jeevan',
+  userName = 'You',
   userPhoto,
   onToggleTask,
   onAddTask,
@@ -458,16 +458,8 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
           </span>
         </div>
 
-        <div className="relative w-14 h-14 shrink-0 rounded-2xl overflow-hidden ring-2 ring-emerald-300 shadow-sm">
-          <img
-            src={MINDFULNESS_ANCHOR}
-            alt="Mindfulness leaf with morning dew"
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              (e.target as HTMLElement).style.display = 'none';
-            }}
-          />
+        <div className="relative w-14 h-14 shrink-0 rounded-2xl overflow-hidden ring-2 ring-emerald-300 shadow-sm bg-emerald-100 flex items-center justify-center">
+          <span className="text-2xl">🌿</span>
           <span className="absolute bottom-1 right-1 text-xs">✨</span>
         </div>
       </div>
