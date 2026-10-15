@@ -443,3 +443,43 @@ This app was built and debugged entirely using **Amazon Q Developer** inside VS 
 | `GStudio/.../public/icons/*.png` (v2) | Replaced placeholder icons with real 52KB/307KB icons |
 | `GStudio/.../docs/index.html` (v2 built) | Added manifest link, theme-color, apple-touch-icon |
 | `DEVNOTES.md` | Moved to v2 folder, updated with full v2 architecture |
+
+---
+
+## Session - 16 Oct 2026
+
+### Lists screen structure and motion
+- Kept the Lists screen organized into parent categories with their own subcategory cards and custom categories.
+- Added contextual light color treatments for subcategory cards and matching colored parent category headers.
+- Added sticky category headers that compact beneath the Nestd header while scrolling. Removed the extra sticky My Lists bar after testing showed the stacked banners crowded the content.
+- Improved scroll measurement by scheduling category updates once per animation frame.
+- Refined accordion closing so subcategory cards fold upward and shrink in sequence into their parent category. Clipped the collapsing content to prevent it overlapping neighboring sections.
+- Made the Lists category count dynamic: three built-in categories plus custom categories.
+
+### Categories and actions
+- Added custom category and category-item types in `src/types/index.ts`, with personalized categories, task checkboxes, optional notes, amounts, and due dates.
+- Added custom category management and automatic emoji selection from category names, including pet and gardening keywords.
+- Removed Add buttons from parent category headers because the parent cannot determine which subcategory should receive a new item.
+- Kept add actions scoped to their destination: grocery actions open the grocery manager, Chits & Savings opens the chits manager, and task-card Add buttons target their own Quick Tasks bucket.
+- Fixed new-entry modal routing so Grocery, Chit, and Quick Task actions open the matching form. The Chit form now requires a numeric monthly contribution and saves the entered amount correctly.
+- Replaced the misleading Quick Tasks ellipsis action with an Add task action.
+
+### App header and navigation
+- Refined the Nestd header's expanded and compact appearances, with an opaque light compact background so scrolling content does not show through.
+- Set Today as the initial screen and kept tab navigation returning the selected screen to its top.
+- Updated the Lists tune control and associated category management flow.
+
+### Files updated
+| File | Changes |
+|---|---|
+| `docs/src/App.tsx` | Today default, scroll/header coordination, entry routing, category and modal behavior |
+| `docs/src/components/Header.tsx` | Compact header appearance and transitions |
+| `docs/src/components/ListsScreen.tsx` | Category hierarchy, custom category management, dynamic count, sticky headers, accordion motion, contextual actions |
+| `docs/src/components/NewEntryModal.tsx` | Entry type selection, quick-task bucket targeting, numeric chit contribution |
+| `docs/src/components/TodayScreen.tsx` | Today screen updates |
+| `docs/src/index.css` | Sticky header and accordion motion styles |
+| `docs/src/types/index.ts` | Custom category and item interfaces |
+
+### Verification and Git
+- `npm.cmd run build` passed. Vite still reports the existing large JavaScript chunk warning (>500 kB).
+- Changes were committed and pushed to `origin/studio` as `22a889a` (`feat: refine lists category actions and motion`).
