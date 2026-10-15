@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChitItem,
   EmiLoanItem,
@@ -65,6 +65,90 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
   onOpenCreateCategory,
   onOpenNewEntry,
 }) => {
+  const SECTION_LABELS_KEY = 'nestd_section_labels';
+
+  const defaultLabels = {
+    groceries: { title: 'Groceries & Food', subtitle: 'Daily Essentials', icon: '🛒' },
+    lifeos: { title: 'Life OS', subtitle: 'Commitments & Wealth', icon: '🌱' },
+    quicktasks: { title: 'Quick Tasks', subtitle: 'Action Lists', icon: '⚡' },
+  };
+
+  type SectionKey = 'groceries' | 'lifeos' | 'quicktasks';
+  type SectionLabel = { title: string; subtitle: string; icon: string };
+  type ExtraSection = SectionLabel & { id: string };
+
+  const [sectionLabels, setSectionLabels] = useState<Record<SectionKey, SectionLabel>>(() => {
+    try {
+      const saved = localStorage.getItem(SECTION_LABELS_KEY);
+      return saved ? { ...defaultLabels, ...JSON.parse(saved) } : defaultLabels;
+    } catch {
+      return defaultLabels;
+    }
+  });
+
+  const [extraSections, setExtraSections] = useState<ExtraSection[]>(() => {
+    try {
+      const saved = localStorage.getItem('nestd_extra_sections');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SECTION_LABELS_KEY, JSON.stringify(sectionLabels));
+    } catch {}
+  }, [sectionLabels]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nestd_extra_sections', JSON.stringify(extraSections));
+    } catch {}
+  }, [extraSections]);
+
+  const [isManageOpen, setIsManageOpen] = useState(false);
+  const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('📋');
+  const [newCatSubtitle, setNewCatSubtitle] = useState('');
+
+  const ICON_OPTIONS = ['📋', '🎯', '💡', '🔖', '📦', '🗂️', '🧩', '🌟', '🔧', '📝', '🏷️', '🎒'];
+
+  const startEdit = (key: SectionKey) => {
+    setEditingSection(key);
+    setEditValue(sectionLabels[key].title);
+  };
+
+  const saveEdit = () => {
+    if (!editingSection || !editValue.trim()) return;
+    setSectionLabels((prev) => ({
+      ...prev,
+      [editingSection]: { ...prev[editingSection], title: editValue.trim() },
+    }));
+    setEditingSection(null);
+    setEditValue('');
+  };
+
+  const addExtraSection = () => {
+    if (!newCatName.trim()) return;
+    const newSec: ExtraSection = {
+      id: `sec-${Date.now()}`,
+      title: newCatName.trim(),
+      subtitle: newCatSubtitle.trim() || 'Custom category',
+      icon: newCatIcon,
+    };
+    setExtraSections((prev) => [...prev, newSec]);
+    setNewCatName('');
+    setNewCatSubtitle('');
+    setNewCatIcon('📋');
+  };
+
+  const deleteExtraSection = (id: string) => {
+    setExtraSections((prev) => prev.filter((s) => s.id !== id));
+  };
+
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     groceries: false,
     lifeos: false,
@@ -120,15 +204,15 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         </div>
 
         <button
-          onClick={() => onOpenNewEntry('chit')}
+          onClick={() => setIsManageOpen(true)}
           className="w-10 h-10 rounded-2xl bg-surface-container flex items-center justify-center text-primary shadow-2xs hover:bg-surface-container-high transition-colors active:scale-95"
-          title="Manage Filters & Options"
+          title="Manage Categories"
         >
-          <span className="material-symbols-outlined text-[20px]">tune</span>
+          <span className="material-symbols-outlined text-[20px]">menu</span>
         </button>
       </div>
 
-      {/* SECTION 1: 🛒 Groceries & Pantry (Collapsible Accordion) */}
+      {/* SECTION 1: Groceries & Pantry (Collapsible Accordion) */}
       <section className="flex flex-col space-y-3" id="section-groceries">
         <div
           onClick={() => toggleSection('groceries')}
@@ -136,12 +220,12 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-300/40 flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
-              🛒
+              {sectionLabels.groceries.icon}
             </div>
             <div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[11px] font-extrabold uppercase tracking-tight text-amber-700">
-                  Daily Essentials
+                  {sectionLabels.groceries.subtitle}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-amber-500" />
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-900 font-bold">
@@ -149,7 +233,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                 </span>
               </div>
               <h2 className="text-xl font-bold font-display text-on-surface tracking-tight leading-none mt-0.5">
-                Groceries & Food
+                {sectionLabels.groceries.title}
               </h2>
             </div>
           </div>
@@ -211,16 +295,6 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenNewEntry('grocery');
-                    }}
-                    className="w-8 h-8 rounded-full bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center text-sm font-bold shadow-2xs active:scale-95 transition-all"
-                    title="Add grocery item"
-                  >
-                    +
-                  </button>
                   <span className="material-symbols-outlined text-slate-400 group-hover:translate-x-0.5 group-hover:text-amber-600 transition-all text-[22px]">
                     chevron_right
                   </span>
@@ -269,16 +343,6 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenNewEntry('grocery');
-                    }}
-                    className="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-sm font-bold shadow-2xs active:scale-95 transition-all"
-                    title="Add vegetable"
-                  >
-                    +
-                  </button>
                   <span className="material-symbols-outlined text-slate-400 group-hover:translate-x-0.5 group-hover:text-emerald-600 transition-all text-[22px]">
                     chevron_right
                   </span>
@@ -298,7 +362,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         )}
       </section>
 
-      {/* SECTION 2: 🌱 Life OS (Commitments & Wealth) */}
+      {/* SECTION 2: Life OS (Commitments & Wealth) */}
       <section className="flex flex-col space-y-3 pt-1" id="section-lifeos">
         <div
           onClick={() => toggleSection('lifeos')}
@@ -306,12 +370,12 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-300/50 flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
-              🌱
+              {sectionLabels.lifeos.icon}
             </div>
             <div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[11px] font-extrabold uppercase tracking-tight text-emerald-700">
-                  Commitments & Wealth
+                  {sectionLabels.lifeos.subtitle}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-emerald-500" />
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
@@ -319,7 +383,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                 </span>
               </div>
               <h2 className="text-xl font-bold font-display text-on-surface tracking-tight leading-none mt-0.5">
-                Life OS
+                {sectionLabels.lifeos.title}
               </h2>
             </div>
           </div>
@@ -631,7 +695,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         )}
       </section>
 
-      {/* SECTION 3: ⚡ Quick Tasks (Collapsible Accordion) */}
+      {/* SECTION 3: Quick Tasks (Collapsible Accordion) */}
       <section className="flex flex-col space-y-3 pt-1" id="section-quicktasks">
         <div
           onClick={() => toggleSection('quicktasks')}
@@ -639,12 +703,12 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-purple-100 border border-purple-200/80 flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
-              ⚡
+              {sectionLabels.quicktasks.icon}
             </div>
             <div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[11px] font-extrabold uppercase tracking-tight text-purple-700">
-                  Action Lists
+                  {sectionLabels.quicktasks.subtitle}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-purple-600" />
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-600/10 text-purple-800 font-bold">
@@ -652,7 +716,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                 </span>
               </div>
               <h2 className="text-xl font-bold font-display text-on-surface tracking-tight leading-none mt-0.5">
-                Quick Tasks
+                {sectionLabels.quicktasks.title}
               </h2>
             </div>
           </div>
@@ -746,16 +810,159 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         )}
       </section>
 
+      {/* Extra custom sections */}
+      {extraSections.map((sec) => (
+        <section key={sec.id} className="flex flex-col space-y-3 pt-1">
+          <div className="flex items-center justify-between px-2 py-2 rounded-2xl bg-surface-container/40">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-xl shadow-2xs shrink-0">
+                {sec.icon}
+              </div>
+              <div>
+                <span className="text-[11px] font-extrabold uppercase tracking-tight text-slate-500">
+                  {sec.subtitle}
+                </span>
+                <h2 className="text-xl font-bold font-display text-on-surface tracking-tight leading-none mt-0.5">
+                  {sec.title}
+                </h2>
+              </div>
+            </div>
+            <span className="text-xs text-slate-400 font-medium px-2">Coming soon</span>
+          </div>
+        </section>
+      ))}
+
       {/* Bottom Action: + Create New List or Category */}
       <button
-        onClick={onOpenCreateCategory}
+        onClick={() => setIsManageOpen(true)}
         className="w-full py-3.5 rounded-2xl bg-surface-container-high/60 hover:bg-surface-container border border-outline-variant/30 active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-primary font-display text-sm font-semibold shadow-2xs group"
       >
         <div className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xs">
           <span className="material-symbols-outlined text-[18px]">add</span>
         </div>
-        <span>+ Create New Category</span>
+        <span>+ Manage Categories</span>
       </button>
+
+      {/* Manage Categories Bottom Sheet */}
+      {isManageOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm animate-fadeIn"
+          onClick={() => { setIsManageOpen(false); setEditingSection(null); }}
+        >
+          <div
+            className="bg-white w-full max-w-md rounded-t-3xl shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="font-display font-extrabold text-base text-slate-900">Manage Categories</h3>
+                <p className="text-[11px] text-slate-400 font-medium mt-0.5">Rename or add main sections</p>
+              </div>
+              <button
+                onClick={() => { setIsManageOpen(false); setEditingSection(null); }}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+              {/* Built-in sections */}
+              {(['groceries', 'lifeos', 'quicktasks'] as SectionKey[]).map((key) => (
+                <div key={key} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <span className="text-2xl">{sectionLabels[key].icon}</span>
+                  {editingSection === key ? (
+                    <input
+                      autoFocus
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingSection(null); }}
+                      className="flex-1 text-sm font-bold text-slate-900 bg-white border border-primary rounded-xl px-3 py-1.5 outline-none"
+                    />
+                  ) : (
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900 truncate">{sectionLabels[key].title}</p>
+                      <p className="text-[11px] text-slate-400">{sectionLabels[key].subtitle}</p>
+                    </div>
+                  )}
+                  {editingSection === key ? (
+                    <button
+                      onClick={saveEdit}
+                      className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-2xs"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">check</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => startEdit(key)}
+                      className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">edit</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {/* Extra sections */}
+              {extraSections.map((sec) => (
+                <div key={sec.id} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <span className="text-2xl">{sec.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-900 truncate">{sec.title}</p>
+                    <p className="text-[11px] text-slate-400">{sec.subtitle}</p>
+                  </div>
+                  <button
+                    onClick={() => deleteExtraSection(sec.id)}
+                    className="w-8 h-8 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                  </button>
+                </div>
+              ))}
+
+              {/* Add new section */}
+              <div className="pt-2 border-t border-slate-100">
+                <p className="text-[11px] font-extrabold uppercase tracking-tight text-slate-400 mb-2">Add New Category</p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {ICON_OPTIONS.map((ic) => (
+                    <button
+                      key={ic}
+                      onClick={() => setNewCatIcon(ic)}
+                      className={`w-9 h-9 rounded-xl text-xl flex items-center justify-center transition-all ${
+                        newCatIcon === ic
+                          ? 'bg-primary/15 border-2 border-primary scale-110'
+                          : 'bg-slate-100 border border-slate-200 hover:bg-slate-200'
+                      }`}
+                    >
+                      {ic}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="Category name (e.g. Travel Plans)"
+                  className="w-full text-sm text-slate-900 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-primary mb-2"
+                />
+                <input
+                  value={newCatSubtitle}
+                  onChange={(e) => setNewCatSubtitle(e.target.value)}
+                  placeholder="Subtitle (optional)"
+                  className="w-full text-sm text-slate-900 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-primary mb-3"
+                />
+                <button
+                  onClick={addExtraSection}
+                  disabled={!newCatName.trim()}
+                  className="w-full py-3 rounded-2xl bg-primary text-white font-display font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99] transition-all"
+                >
+                  + Add Category
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
