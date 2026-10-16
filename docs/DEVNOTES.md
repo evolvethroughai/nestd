@@ -334,7 +334,7 @@ After every working change, sync the backup manually.
 
 ## Summary of My AI Agent (Amazon Q Developer)
 
-This app was built and debugged entirely using **Amazon Q Developer** inside VS Code — running in the IDE as an agentic coding assistant.
+Development has used **Amazon Q Developer** and **ChatGPT / Codex** inside VS Code for coding and debugging, with **Stitch** and **Google AI Studio (G Studio)** used for UI concept exploration and iteration. Screenshots and user feedback guided the final interface decisions; code changes were made and verified in the React/Vite project.
 
 ### What the agent did across this project
 
@@ -501,6 +501,7 @@ This app was built and debugged entirely using **Amazon Q Developer** inside VS 
 - Reduced expanded/compact header transitions from 500 ms to 200 ms and limited animated CSS properties to reduce the sluggish feel across Today, Lists, and Sorti.
 - Added separate scroll thresholds for collapsing and expanding so the shared header does not repeatedly toggle near one cutoff.
 - Changed the compact header background from near-white `#f3f4ff` to a more visible pale indigo `#e7e9ff`.
+- After feedback that expanding felt slower than collapsing, made the shared header asymmetric: compacting remains 200 ms while expanding to the full header is 120 ms.
 
 ### Files updated
 | File | Changes |
@@ -521,5 +522,38 @@ This app was built and debugged entirely using **Amazon Q Developer** inside VS 
 - `npm.cmd run lint` passed (TypeScript check).
 - `npm.cmd run build:docs` passed; Vite continues to report the existing large JavaScript chunk warning (>500 kB).
 - Account and Lists updates were pushed to `origin/studio` in commit `6ab4e31` (`feat: improve profile and scroll behavior`).
-- The compact header tint change to `#e7e9ff` was rebuilt locally after that push and is not yet committed or pushed.
+- The compact header tint and 120 ms expand transition were subsequently included with the shared scroll and produce updates in commit `aaa27d9`.
 - Firestore rules are not present in this repository; verify Firebase rules restrict reads/writes to the authenticated user's UID before storing real gender or date-of-birth details.
+
+### QA pass - account data isolation
+- Added a cloud-ready gate so Firestore writes wait until the signed-in user's first state snapshot is read (or confirmed absent), preventing default/local state from racing and overwriting saved account data.
+- Track the UID that owns the local cached state. On account changes or sign-out, reset in-memory app data before another account is shown; retain guest data for first sign-in so it can be migrated to that account.
+- Apply initial data defaults for fields missing from an existing remote document, so another account's cached fields are not retained.
+- Track the last serialized sync to avoid repeatedly writing state received from the Firestore snapshot listener.
+- `npm.cmd run lint` and `npm.cmd run build:docs` passed. The account data-isolation QA changes were included in commit `aaa27d9`.
+
+### Grocery shopping flow - 16 Oct 2026
+- Split adding groceries into **Quick add to Buy now** for one-time purchases and **Add to master list** for reusable items. One-time items are excluded from the master catalog and its counts.
+- Removed the default quantity from new master items and the Master list display. Starting a master item in Buy now clears its previous trip quantity and price so each shop begins fresh.
+- Added editable master fields for item name, category, and usual store, retaining delete actions.
+- Replaced the fixed in-screen store list with user-addable store names. Store choices persist in local storage and sync with that signed-in user's Firestore data; accounts still without saved store preferences receive the built-in starter choices.
+- Kept quick grocery capture as a one-time Buy now item. Existing grocery records without the new catalog flag continue to be treated as master items.
+- `npm.cmd run lint` and `npm.cmd run build:docs` passed. Vite still reports the existing large JavaScript chunk warning (>500 kB). The grocery flow and production build were included in the later `aaa27d9` push.
+- Grocery panel consolidation: **Buy now** now contains the one-off quick-add form and active shopping rows in one amber panel; the Master list contains its category rows, add-to-master form, and store control in one neutral panel. Buy-now actions share the amber color across both panels.
+
+### Produce shopping, My Lists visibility, and scroll polish - 16 Oct 2026
+- Added a dedicated **Fruits** shopping section alongside Vegetables, using the existing weekly produce workflow. Kept the pineapple icon and removed the apple icon treatment after feedback on the fruit tab.
+- Made fruit restocking follow the same model as vegetables: purchased fruit is retained in purchase history and can be returned to Buy now on the configured weekly restock day. Produce history is kept by individual purchase date/week for the last two months rather than combined into monthly totals.
+- Added per-section schedule preferences for the produce restock day and planned market day, so vegetable and fruit schedules can be configured independently. Updated the schedule and list summaries to use those preferences.
+- Refined the vegetable and fruit weekly-list, schedule, and purchase-history cards with separate produce color treatments, collapsible sections, and the requested natural, more visible palette adjustments.
+- Added Fruits to the Groceries & Food subcategory cards in My Lists, with its pending count and market-day summary. Selecting the card now opens the fruit shopping section directly.
+- Tuned the shared Nestd header and category accordion motion to reduce the lag and banner overlap during scroll, including shorter transitions and less travel while categories close. Disabled scroll anchoring for the affected layout.
+- Rebuilt the GitHub Pages app output in `docs/docs/` after the source changes.
+- Verification: `npm.cmd run lint` and `npm.cmd run build:docs` passed. Vite continues to report the existing large JavaScript chunk warning (>500 kB).
+- Committed and pushed the app and Pages changes to `origin/studio` as `aaa27d9` (`Improve produce lists and scrolling experience`).
+
+### Tools and workflow used today
+- **Stitch** and **Google AI Studio (G Studio):** used during UI concept and visual direction exploration for the shopping screens and produce sections. The final layout and behavior were refined against the screenshots and feedback in this session.
+- **ChatGPT / Codex:** used to turn the product feedback into implementation steps, inspect and edit the React/TypeScript app and styles, connect the Fruits section to its weekly workflow, tune scrolling behavior, run the requested lint/build checks, and prepare this development summary.
+- **Git and GitHub:** used to track the source and built Pages output. The app changes were committed as `aaa27d9` and pushed to `origin/studio`; this DEVNOTES update is being recorded in its own commit.
+- Workflow: discuss the intended behavior, compare the UI with screenshots, implement a focused change in the app, verify the build, review the rendered result, and iterate from feedback.
