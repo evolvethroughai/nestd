@@ -15,14 +15,14 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, onOpenProfile, user,
   const photoURL = user?.photoURL;
 
   return (
-    <header className={`sticky top-0 w-full z-50 overflow-hidden pt-safe text-white shadow-[0_8px_24px_rgba(55,48,163,0.16)] transition-colors duration-200 ${compact ? 'bg-[#e7e9ff]' : 'bg-gradient-to-r from-indigo-800 via-primary to-violet-700'}`}>
-      <div className={`pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/10 blur-2xl transition-opacity duration-200 ${compact ? 'opacity-0' : 'opacity-100'}`} />
-      <div className={`relative z-10 ${compact ? 'h-[50px]' : 'h-[72px]'} px-5 max-w-md mx-auto flex items-center justify-between transition-[height] duration-200 ease-out`}>
+    <header className={`sticky top-0 w-full z-50 overflow-hidden pt-safe text-white shadow-[0_8px_24px_rgba(55,48,163,0.16)] transition-colors ${compact ? 'duration-200' : 'duration-[120ms]'} ${compact ? 'bg-[#e7e9ff]' : 'bg-gradient-to-r from-indigo-800 via-primary to-violet-700'}`}>
+      <div className={`pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/10 blur-2xl transition-opacity ${compact ? 'duration-200' : 'duration-[120ms]'} ${compact ? 'opacity-0' : 'opacity-100'}`} />
+      <div className={`relative z-10 ${compact ? 'h-[50px] duration-200' : 'h-[72px] duration-[120ms]'} px-5 max-w-md mx-auto flex items-center justify-between transition-[height] ease-out`}>
         <div className="flex items-center gap-2.5">
-          <span className={`font-display font-extrabold tracking-tight transition-[font-size,color] duration-200 ease-out ${compact ? 'text-[19px] text-indigo-950' : 'text-[26px] text-white'}`}>
+          <span className={`font-display font-extrabold tracking-tight transition-[font-size,color] ease-out ${compact ? 'duration-200 text-[19px] text-indigo-950' : 'duration-[120ms] text-[26px] text-white'}`}>
             Nestd
           </span>
-          <div className={`flex items-center gap-1.5 rounded-full font-semibold select-none overflow-hidden transition-[max-width,padding,font-size,background-color,border-color,color,box-shadow] duration-200 ease-out ${compact ? 'max-w-28 px-2 py-1 text-[9px] opacity-100 bg-indigo-100/80 border border-indigo-200/70 text-indigo-800 shadow-none' : 'max-w-40 px-3 py-1.5 text-xs opacity-100 bg-white/15 border border-white/20 text-white shadow-sm backdrop-blur-sm'}`}>
+          <div className={`flex items-center gap-1.5 rounded-full font-semibold select-none overflow-hidden transition-[max-width,padding,font-size,background-color,border-color,color,box-shadow] ease-out ${compact ? 'duration-200 max-w-28 px-2 py-1 text-[9px] opacity-100 bg-indigo-100/80 border border-indigo-200/70 text-indigo-800 shadow-none' : 'duration-[120ms] max-w-40 px-3 py-1.5 text-xs opacity-100 bg-white/15 border border-white/20 text-white shadow-sm backdrop-blur-sm'}`}>
             <span className={`${compact ? 'w-1 h-1' : 'w-1.5 h-1.5'} rounded-full bg-emerald-400 animate-pulse transition-[width,height] duration-200`} />
             <span>Get Sortd.</span>
           </div>
@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, onOpenProfile, user,
               </span>
             )}
           </div>
-          <div className={`relative ${compact ? 'w-8 h-8 ring-indigo-200 bg-white/70' : 'w-10 h-10 ring-white/40 bg-white/15'} rounded-full overflow-hidden ring-2 flex items-center justify-center shrink-0 shadow-sm transition-[width,height,background-color,ring-color] duration-200 ease-out`}>
+          <div className={`relative ${compact ? 'w-8 h-8 ring-indigo-200 bg-white/70 duration-200' : 'w-10 h-10 ring-white/40 bg-white/15 duration-[120ms]'} rounded-full overflow-hidden ring-2 flex items-center justify-center shrink-0 shadow-sm transition-[width,height,background-color,ring-color] ease-out`}>
             {photoURL ? (
               <img
                 src={photoURL}

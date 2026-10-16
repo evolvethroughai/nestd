@@ -47,11 +47,13 @@ export function syncToFirestore(uid: string, data: object) {
   return setDoc(ref, { json: JSON.stringify(data) });
 }
 
-export function listenFirestore(uid: string, cb: (json: string) => void): Unsubscribe {
+export function listenFirestore(uid: string, cb: (json: string | null) => void): Unsubscribe {
   const ref = getUserDocRef(uid);
   return onSnapshot(ref, (snap) => {
     if (snap.exists() && snap.data()?.json) {
       cb(snap.data()!.json as string);
+    } else {
+      cb(null);
     }
   });
 }
