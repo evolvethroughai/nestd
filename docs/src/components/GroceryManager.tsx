@@ -392,32 +392,28 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
             {buyNowList.length ? (
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1 px-2 py-1 text-[10px] font-extrabold text-amber-900/60 uppercase tracking-wider">
-                  <span className="w-6 sm:w-7" />
-                  <span className="flex-1">Item</span>
-                  <span className="ml-auto sm:hidden">Qty · ₹ Price</span>
-                  <span className="hidden w-16 text-center sm:block">Qty</span>
-                  <span className="hidden w-14 text-center sm:block">₹ Price</span>
-                  <span className="hidden w-7 sm:block" />
+                  <span>Items to buy</span>
                 </div>
                 {buyNowList.map((item) => (
-                  <div key={item.id} className={`grid grid-cols-[24px_minmax(0,1fr)_22px] sm:flex sm:items-center gap-x-2 gap-y-1 p-2 sm:p-2.5 rounded-xl border transition-all duration-150 ${leavingPurchaseItems.has(item.id) ? 'opacity-0 -translate-y-2 scale-[0.98]' : ''} ${confirmingPurchaseItems.has(item.id) ? 'bg-emerald-50 border-emerald-300 shadow-sm shadow-emerald-100' : 'bg-white border-amber-200'}`}>
+                  <div key={item.id} className={`grid grid-cols-[24px_minmax(0,1fr)_22px] gap-x-2 gap-y-1 p-3 rounded-xl border transition-all duration-150 ${leavingPurchaseItems.has(item.id) ? 'opacity-0 -translate-y-2 scale-[0.98]' : ''} ${confirmingPurchaseItems.has(item.id) ? 'bg-emerald-50 border-emerald-300 shadow-sm shadow-emerald-100' : 'bg-white border-amber-200'}`}>
                     <button onClick={() => markItemPurchased(item.id, item.price)} disabled={confirmingPurchaseItems.has(item.id)} aria-label={confirmingPurchaseItems.has(item.id) ? `${item.name} marked done` : `Mark ${item.name} bought`} className={`row-span-2 self-center w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all duration-150 sm:row-span-1 ${confirmingPurchaseItems.has(item.id) ? 'border-emerald-600 bg-emerald-500 text-white scale-105 shadow-sm shadow-emerald-300' : 'border-amber-300 bg-white text-emerald-700 hover:border-emerald-500 hover:bg-emerald-50'}`} title={confirmingPurchaseItems.has(item.id) ? 'Done — saving to purchase history' : 'Mark as bought'}>
                       <span className="material-symbols-outlined text-[15px]">check</span>
                     </button>
-                    <div className="col-start-2 row-start-1 min-w-0 sm:col-auto sm:row-auto sm:flex-1">
+                    <div className="col-start-2 row-start-1 min-w-0 ">
                       <div className="flex min-w-0 items-start gap-1 font-semibold text-xs text-slate-800 whitespace-normal break-words leading-snug"><span className="min-w-0">{item.name}</span>{confirmingPurchaseItems.has(item.id) && <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold leading-none text-emerald-800">Done!</span>}</div>
-                      <div className="flex min-w-0 items-center gap-1 text-amber-800 mt-0.5">
+                      <div className="relative mt-1 inline-flex max-w-full items-center gap-1 rounded-md bg-slate-50 px-1.5 py-1 text-slate-500">
                         <span className="material-symbols-outlined text-[13px] leading-none" aria-hidden="true">storefront</span>
-                        <span className="text-[9px] font-semibold shrink-0">Bought at</span>
+                        
                         <select value={addingPurchaseStoreForItemId === item.id ? '__add_new_store__' : item.buyNowStore || item.store || ''} onChange={(e) => {
                           if (e.target.value === '__add_new_store__') setAddingPurchaseStoreForItemId(item.id);
                           else onUpdateItem(item.id, { buyNowStore: e.target.value });
-                        }} aria-label={`Bought at store for ${item.name}`} className="min-w-0 w-0 flex-1 bg-transparent text-[10px] font-bold focus:outline-none">
+                        }} aria-label={`Bought at store for ${item.name}`} className="min-w-0 max-w-[140px] appearance-none bg-transparent pr-3 text-[11px] font-medium focus:outline-none">
                           {!item.buyNowStore && !item.store && <option value="">Choose store</option>}
                           {item.store && !stores.includes(item.store) && <option value={item.store}>{item.store}</option>}
                           {stores.map((store) => <option key={store} value={store}>{store}</option>)}
                           <option value="__add_new_store__">+ Add new store…</option>
                         </select>
+                        <span className="pointer-events-none absolute right-1 text-[12px] material-symbols-outlined" aria-hidden="true">expand_more</span>
                       </div>
                       {addingPurchaseStoreForItemId === item.id && <div className="mt-1 flex gap-1">
                         <input autoFocus value={purchaseStoreDraft} onChange={(e) => setPurchaseStoreDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPurchaseStore(item.id); } }} placeholder="New store name" maxLength={40} className="min-w-0 flex-1 bg-white px-2 py-1 rounded-lg text-[10px] border border-amber-200" />
@@ -425,11 +421,11 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
                         <button type="button" onClick={() => { setAddingPurchaseStoreForItemId(null); setPurchaseStoreDraft(''); }} className="px-1 py-1 text-[10px] text-slate-500">×</button>
                       </div>}
                     </div>
-                    <div className="col-start-2 row-start-2 flex justify-end gap-1.5 sm:contents">
-                      <input value={item.quantity || ''} onChange={(e) => onUpdateItem(item.id, { quantity: e.target.value })} placeholder="qty" maxLength={20} className="w-[56px] min-w-0 text-center text-[11px] sm:w-16 sm:text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg py-0.5 sm:py-1 px-1" aria-label={`Quantity for ${item.name}`} />
-                      <input value={item.price || ''} onChange={(e) => onUpdateItem(item.id, { price: e.target.value })} placeholder="₹" maxLength={8} className="w-12 min-w-0 text-center text-[11px] sm:w-14 sm:text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg py-0.5 sm:py-1 px-1" aria-label={`Price for ${item.name}`} />
+                    <div className="col-span-2 col-start-2 row-start-2 mt-1 grid grid-cols-2 gap-2"><label className="min-w-0"><span className="mb-1 block text-[10px] font-medium text-slate-500">Quantity</span>
+                      <input value={item.quantity || ''} onChange={(e) => onUpdateItem(item.id, { quantity: e.target.value })} placeholder="qty" maxLength={20} className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-[14px] font-semibold text-slate-800 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100" aria-label={`Quantity for ${item.name}`} /></label><label className="min-w-0"><span className="mb-1 block text-[10px] font-medium text-slate-500">Price (₹)</span>
+                      <input value={item.price || ''} onChange={(e) => onUpdateItem(item.id, { price: e.target.value })} placeholder="₹" maxLength={8} className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-[14px] font-semibold text-slate-800 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100" aria-label={`Price for ${item.name}`} /></label>
                     </div>
-                    <button onClick={() => item.isInMaster === false ? onDeleteItem(item.id) : onToggleNeeded(item.id)} className="col-start-3 row-start-1 w-[22px] h-7 rounded-lg text-amber-700 hover:bg-rose-50 hover:text-rose-600 sm:col-auto sm:row-auto sm:w-7" title={item.isInMaster === false ? 'Remove one-time item' : 'Remove from Buy now'}>×</button>
+                    <button onClick={() => item.isInMaster === false ? onDeleteItem(item.id) : onToggleNeeded(item.id)} className="col-start-3 row-start-1 w-[22px] h-7 rounded-lg text-amber-700 hover:bg-rose-50 hover:text-rose-600 " title={item.isInMaster === false ? 'Remove one-time item' : 'Remove from Buy now'}>×</button>
                   </div>
                 ))}
               </div>
@@ -464,23 +460,23 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
                     </button>
                     {isOpen && <div className="p-2 divide-y divide-slate-100 bg-white">
                       {grpItems.map((item) => <React.Fragment key={item.id}>
-                        <div className="my-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl bg-violet-50/70 px-3 py-2.5 transition-colors hover:bg-violet-100/70">
-                          <div className="min-w-0 flex-1 basis-24">
-                            <span className="block break-words text-[13px] font-semibold leading-snug text-violet-950">{item.name}</span>
-                            <span className="mt-1 flex items-center gap-1 text-[10px] font-medium text-violet-700">
-                              <span className="material-symbols-outlined text-[14px] leading-none text-violet-400" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }} aria-hidden="true">storefront</span>
+                        <div className="my-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-slate-100 bg-white px-2.5 py-3 transition-colors hover:bg-slate-50">
+                          <div className="min-w-0">
+                            <span className="block break-words text-[13px] font-semibold leading-snug text-slate-800">{item.name}</span>
+                            <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-slate-500">
+                              <span className="material-symbols-outlined text-[14px] leading-none text-slate-400" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }} aria-hidden="true">storefront</span>
                               {item.store || 'Usual store not set'}
                             </span>
                           </div>
                           <div className="flex shrink-0 items-center gap-1">
-                            <button type="button" onClick={() => { setEditingId(item.id); setEditName(item.name); setEditStore(item.store || ''); setEditGroup(item.group); }} aria-label={`Edit ${item.name}`} title="Edit item" className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 active:scale-95">
+                            <button type="button" onClick={() => { setEditingId(item.id); setEditName(item.name); setEditStore(item.store || ''); setEditGroup(item.group); }} aria-label={`Edit ${item.name}`} title="Edit item" className="flex h-8 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 active:scale-95">
                               <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }} aria-hidden="true">edit</span>
                             </button>
-                            <button type="button" onClick={() => onToggleNeeded(item.id)} aria-label={item.needed && !item.completed ? `Remove ${item.name} from Buy now` : `Add ${item.name} to Buy now`} title={item.needed && !item.completed ? 'Remove from Buy now' : 'Add to Buy now'} className={`flex h-8 items-center justify-center gap-1 rounded-full px-3 text-[10px] font-semibold transition active:scale-95 ${item.needed && !item.completed ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : 'bg-amber-100/80 text-amber-900 hover:bg-amber-200'}`}>
+                            <button type="button" onClick={() => onToggleNeeded(item.id)} aria-label={item.needed && !item.completed ? `Remove ${item.name} from Buy now` : `Add ${item.name} to Buy now`} title={item.needed && !item.completed ? 'Remove from Buy now' : 'Add to Buy now'} className={`flex h-8 items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-semibold transition active:scale-95 ${item.needed && !item.completed ? 'bg-amber-100 text-amber-900 hover:bg-amber-200' : 'bg-amber-100/80 text-amber-900 hover:bg-amber-200'}`}>
                               <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 450, 'GRAD' 0, 'opsz' 20" }} aria-hidden="true">{item.needed && !item.completed ? 'check' : 'add'}</span>
                               <span>{item.needed && !item.completed ? 'Added' : 'Add'}</span>
                             </button>
-                            <button type="button" onClick={() => onDeleteItem(item.id)} aria-label={`Delete ${item.name}`} title="Delete from Master list" className="flex h-8 w-8 items-center justify-center rounded-full text-slate-300 transition hover:bg-rose-50 hover:text-rose-500 active:scale-95">
+                            <button type="button" onClick={() => onDeleteItem(item.id)} aria-label={`Delete ${item.name}`} title="Delete from Master list" className="flex h-8 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-500 active:scale-95">
                               <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }} aria-hidden="true">delete</span>
                             </button>
                           </div>
@@ -596,24 +592,23 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
                           return (
                           <div
                             key={purchase.id}
-                            className="p-2 rounded-xl bg-white/80 border border-sky-100 flex items-center justify-between gap-2"
+                            className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 rounded-xl border border-sky-100 bg-white p-3"
                           >
                             <div className="flex-1 min-w-0">
                               <span className="font-semibold text-xs text-slate-700 block break-words">
                                 {purchase.name}
                               </span>
-                              <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                                {purchase.quantity && <span>{purchase.quantity}</span>}
-                                {purchase.price && <span>· ₹{purchase.price}</span>}
-                                <span>· {purchase.group}</span>
-                                {purchase.store && <span>· {purchase.store}</span>}
-                                <span>· {new Date(purchase.purchasedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-relaxed text-slate-500">
+                                {purchase.quantity && <span className="whitespace-nowrap font-medium">{purchase.quantity}</span>}
+                                <span className="whitespace-nowrap">{new Date(purchase.purchasedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                               </div>
+                              {purchase.store && <span className="mt-1 block break-words text-[11px] text-slate-500">{purchase.store}</span>}
                             </div>
+                            <span className="whitespace-nowrap text-sm font-bold text-slate-900">{purchase.price ? `₹${purchase.price}` : '—'}</span>
                             {currentItem && <button
                               onClick={() => !alreadyQueued && onToggleNeeded(currentItem.id)}
                               disabled={alreadyQueued}
-                              className="px-2.5 py-1 rounded-lg border border-sky-200 bg-white text-sky-800 font-extrabold text-[11px] hover:bg-sky-100 shadow-2xs shrink-0 disabled:text-slate-400 disabled:bg-slate-100"
+                              className="col-start-2 rounded-lg bg-sky-50 px-2.5 py-2 text-[11px] font-semibold text-sky-800 hover:bg-sky-100 disabled:bg-slate-50 disabled:text-slate-400"
                             >
                               {alreadyQueued ? 'In Buy now' : '+ Again'}
                             </button>}
