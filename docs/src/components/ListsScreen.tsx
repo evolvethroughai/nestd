@@ -551,33 +551,33 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         <AccordionContent open={!collapsedSections.lifeos} className="ml-2 border-l-2 border-emerald-200 pl-3">
           <p className="mb-3 pl-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-emerald-700/80">Subcategories</p>
           <div className="grid grid-cols-1 gap-3.5">
-            {/* Card 1: Savings Green Chit Fund Theme */}
+            {/* Card 1: Champagne Gold Chit Fund Theme */}
             <div
               onClick={onOpenChits}
-              className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-emerald-300/70 shadow-[0_4px_20px_-4px_rgba(16,120,80,0.12)] active:scale-[0.99] flex items-center justify-between"
+              className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-amber-300/70 shadow-[0_4px_20px_-4px_rgba(154,119,51,0.12)] active:scale-[0.99] flex items-center justify-between"
               style={{
-                background: 'linear-gradient(135deg, #ecfdf5 0%, #f4fbf7 55%, #ffffff 100%)',
+                background: 'linear-gradient(135deg, #fffaf0 0%, #faf1dc 55%, #ffffff 100%)',
               }}
             >
               <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-2xl shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-2xl shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200">
                   💰
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-display text-base font-bold text-emerald-950">
+                    <h3 className="font-display text-base font-bold text-amber-950">
                       Chits & Savings
                     </h3>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 text-[11px] font-bold">
+                    <span className="px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 text-[11px] font-bold">
                       {activeChits.length} active
                     </span>
-                    <span className="px-2 py-0.5 rounded-full bg-white/80 border border-emerald-200 text-emerald-900 text-[11px] font-medium">
+                    <span className="px-2 py-0.5 rounded-full bg-white/80 border border-amber-200 text-amber-900 text-[11px] font-medium">
                       {chitNames || 'No active chits'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className="inline-flex items-center gap-1 text-emerald-900 text-xs font-bold bg-white/90 border border-emerald-300/60 px-2.5 py-0.5 rounded-lg shadow-2xs">
-                      <span className="material-symbols-outlined text-[13px] text-emerald-700">event</span>
+                    <span className="inline-flex items-center gap-1 text-amber-900 text-xs font-bold bg-white/90 border border-amber-300/60 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                      <span className="material-symbols-outlined text-[13px] text-amber-700">event</span>
                       {chitDueLabel}
                     </span>
                   </div>
@@ -590,12 +590,12 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                     e.stopPropagation();
                     onOpenChits();
                   }}
-                  className="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-600 text-emerald-950 font-bold shadow-sm flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                  className="w-9 h-9 rounded-full bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold shadow-sm flex items-center justify-center transition-all hover:scale-105 active:scale-95"
                   title="Open Chits Manager & Calculator"
                 >
                   <span className="material-symbols-outlined text-[18px]">payments</span>
                 </button>
-                <span className="material-symbols-outlined text-emerald-600 text-[22px] group-hover:text-emerald-900 transition-colors">
+                <span className="material-symbols-outlined text-amber-600 text-[22px] group-hover:text-amber-900 transition-colors">
                   chevron_right
                 </span>
               </div>

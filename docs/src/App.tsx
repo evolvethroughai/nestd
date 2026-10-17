@@ -1220,7 +1220,7 @@ export default function App() {
           <div className="bg-surface-container-lowest rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[90vh] flex flex-col border border-outline-variant/30 shadow-2xl overflow-hidden">
             <div className="p-4 border-b border-outline-variant/20 flex items-center justify-between bg-surface-container-low/40">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center text-lg">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-lg">
                   💰
                 </div>
                 <div>

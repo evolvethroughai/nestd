@@ -1,6 +1,13 @@
 import { ChitCalculator } from './ChitCalculator';
+import { ChitGuide } from './ChitGuide';
 import React, { useState } from 'react';
 import { ChitItem } from '../types';
+
+const CHIT_CARD_TONES = [
+  { background: 'linear-gradient(135deg, #fffdf7, #f8efd9)', borderColor: '#e4d4a7' },
+  { background: 'linear-gradient(135deg, #fff9eb, #f0e0ba)', borderColor: '#d9c18a' },
+  { background: 'linear-gradient(135deg, #fffaf3, #f5e4ca)', borderColor: '#e1c9a4' },
+];
 
 interface ChitsManagerProps {
   chits: ChitItem[];
@@ -154,38 +161,39 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
   return (
     <div className="flex flex-col w-full space-y-4 pb-6 animate-fadeIn">
       {/* Summary Header */}
-      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-300/40 grid grid-cols-3 gap-2 text-center shadow-xs">
+      <div className="p-4 rounded-2xl bg-[#f5edd8] border border-[#e6d8b4] grid grid-cols-3 gap-2 text-center shadow-xs">
         <div>
-          <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">
+          <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">
             Monthly Outflow
           </span>
-          <span className="font-display font-extrabold text-base sm:text-lg text-emerald-950">
+          <span className="font-display font-extrabold text-base sm:text-lg text-amber-950">
             ₹{totalMonthlyOutflow.toLocaleString('en-IN')}
           </span>
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">
+          <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">
             Active Chits
           </span>
-          <span className="font-display font-extrabold text-base sm:text-lg text-emerald-950">
+          <span className="font-display font-extrabold text-base sm:text-lg text-amber-950">
             {activeChits.length}
           </span>
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">
+          <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">
             Lifted
           </span>
-          <span className="font-display font-extrabold text-base sm:text-lg text-emerald-950">
+          <span className="font-display font-extrabold text-base sm:text-lg text-amber-950">
             {liftedCount}
           </span>
         </div>
       </div>
 
+      <ChitGuide />
       <ChitCalculator />
 
       {/* Chit Cards List */}
       <div className="space-y-3">
-        {chits.map((item) => {
+        {chits.map((item, index) => {
           const startDate = item.startDate ? new Date(item.startDate + 'T12:00:00') : null;
           const totalMonths = item.totalMonths || 0;
           const monthlyAmt = item.monthlyAmt || 0;
@@ -239,7 +247,8 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
           return (
             <div
               key={item.id}
-              className="rounded-2xl border border-yellow-300/60 bg-gradient-to-br from-[#fffdf0] to-[#fef9c3] shadow-xs overflow-hidden"
+              className="rounded-2xl border shadow-xs overflow-hidden"
+              style={CHIT_CARD_TONES[index % CHIT_CARD_TONES.length]}
             >
               {/* Card Header (Collapsible trigger) */}
               <div
@@ -249,12 +258,12 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="text-base">🤝</span>
-                    <h4 className="font-display font-extrabold text-sm text-yellow-950 truncate">
+                    <h4 className="font-display font-extrabold text-sm text-amber-950 truncate">
                       {item.name}
                     </h4>
                   </div>
                   {dueBadge && (
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-white/90 border border-yellow-300 text-[10px] font-bold text-yellow-900">
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-white/90 border border-amber-300 text-[10px] font-bold text-amber-900">
                       📅 {dueBadge}
                     </span>
                   )}
@@ -264,10 +273,10 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                       item.status === 'done'
-                        ? 'bg-emerald-100 text-emerald-800'
+                        ? 'bg-amber-100 text-amber-800'
                         : item.lifted
-                        ? 'bg-emerald-200 text-emerald-900'
-                        : 'bg-yellow-200 text-yellow-900'
+                        ? 'bg-amber-200 text-amber-900'
+                        : 'bg-amber-200 text-amber-900'
                     }`}
                   >
                     {item.status === 'done'
@@ -276,7 +285,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                       ? '✅ Lifted'
                       : '💰 Paying'}
                   </span>
-                  <span className="material-symbols-outlined text-[18px] text-yellow-700">
+                  <span className="material-symbols-outlined text-[18px] text-amber-700">
                     {isOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
                   </span>
                 </div>
@@ -284,44 +293,44 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
 
               {/* Card Body */}
               {isOpen && (
-                <div className="p-3.5 pt-0 space-y-3 text-xs border-t border-yellow-200/50">
+                <div className="p-3.5 pt-0 space-y-3 text-xs border-t border-amber-200/50">
                   {/* 3 Metric Pills */}
                   <div className="grid grid-cols-3 gap-2 text-center pt-2">
-                    <div className="p-2 rounded-xl bg-white/80 border border-yellow-200">
-                      <span className="font-display font-bold text-xs text-yellow-950 block">
+                    <div className="p-2 rounded-xl bg-white/80 border border-amber-200">
+                      <span className="font-display font-bold text-xs text-amber-950 block">
                         ₹{monthlyAmt.toLocaleString('en-IN')}
                       </span>
-                      <span className="text-[10px] text-yellow-800">Monthly</span>
+                      <span className="text-[10px] text-amber-800">Monthly</span>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-white/80 border border-yellow-200">
-                      <span className="font-display font-bold text-xs text-yellow-950 block">
+                    <div className="p-2 rounded-xl bg-white/80 border border-amber-200">
+                      <span className="font-display font-bold text-xs text-amber-950 block">
                         ₹{pot.toLocaleString('en-IN')}
                       </span>
-                      <span className="text-[10px] text-yellow-800">Total Pot</span>
+                      <span className="text-[10px] text-amber-800">Total Pot</span>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-white/80 border border-yellow-200">
-                      <span className="font-display font-bold text-xs text-yellow-950 block">
+                    <div className="p-2 rounded-xl bg-white/80 border border-amber-200">
+                      <span className="font-display font-bold text-xs text-amber-950 block">
                         {monthsDone}/{totalMonths}
                       </span>
-                      <span className="text-[10px] text-yellow-800">Months</span>
+                      <span className="text-[10px] text-amber-800">Months</span>
                     </div>
                   </div>
 
                   {/* Progress Bar */}
                   <div className="space-y-1">
-                    <div className="w-full h-2 rounded-full bg-yellow-200 overflow-hidden">
+                    <div className="w-full h-2 rounded-full bg-amber-200 overflow-hidden">
                       <div
-                        className="h-full bg-emerald-600 transition-all duration-500 rounded-full"
+                        className="h-full bg-amber-600 transition-all duration-500 rounded-full"
                         style={{ width: `${progressPct}%` }}
                       />
                     </div>
-                    <div className="flex justify-between text-[11px] text-yellow-900 font-semibold">
+                    <div className="flex justify-between text-[11px] text-amber-900 font-semibold">
                       <span>₹{paidSoFar.toLocaleString('en-IN')} paid</span>
                       <span>{endDate ? `Ends ${formatDateStr(endDate.toISOString().slice(0, 10))}` : ''}</span>
                     </div>
-                    <div className="text-[10px] text-yellow-800/80 space-y-0.5 pt-0.5">
+                    <div className="text-[10px] text-amber-800/80 space-y-0.5 pt-0.5">
                       {startDate && <div>🗓️ Start: {formatDateStr(item.startDate)}</div>}
                       {endDate && <div>⏳ End: &nbsp;{formatDateStr(endDate.toISOString().slice(0, 10))}</div>}
                     </div>
@@ -329,25 +338,25 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
 
                   {/* Lifted Details Box */}
                   {item.lifted && (
-                    <div className="p-3 rounded-xl bg-white/90 border border-yellow-300 space-y-1.5">
+                    <div className="p-3 rounded-xl bg-white/90 border border-amber-300 space-y-1.5">
                       <div
                         onClick={() => {
                           setLiftModalChit(item);
                           setLiftComm(item.commission === undefined ? '' : String(item.commission));
                         }}
-                        className="flex justify-between items-center cursor-pointer hover:text-emerald-800 font-semibold"
+                        className="flex justify-between items-center cursor-pointer hover:text-amber-800 font-semibold"
                         title="Click to edit lifted date or commission"
                       >
                         <span>Lifted on:</span>
-                        <span className="text-emerald-900 font-bold underline flex items-center gap-1">
+                        <span className="text-amber-900 font-bold underline flex items-center gap-1">
                           {formatDateStr(item.liftedDate)} ✎
                         </span>
                       </div>
                       <div className="flex justify-between text-rose-600">
                         <span>Commission cut:</span>
-                        <span className="font-bold">-₹{(item.commission || 0).toLocaleString('en-IN')}</span>
+                        <span className="rounded-md bg-rose-50 px-1.5 font-bold text-rose-600">-₹{(item.commission || 0).toLocaleString('en-IN')}</span>
                       </div>
-                      <div className="flex justify-between text-emerald-800 font-bold">
+                      <div className="flex justify-between text-amber-800 font-bold">
                         <span>Amount received:</span>
                         <span>₹{(item.amtReceived || 0).toLocaleString('en-IN')}</span>
                       </div>
@@ -359,7 +368,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                     <div
                       className={`p-3 rounded-xl border space-y-1 ${
                         isLiftedProfit
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                          ? 'bg-amber-50 border-amber-200 text-amber-950'
                           : 'bg-rose-50 border-rose-200 text-rose-950'
                       }`}
                     >
@@ -380,20 +389,20 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                       </div>
                     </div>
                   ) : item.status === 'done' ? (
-                    <div className="p-3 rounded-xl bg-white/90 border border-emerald-200 text-emerald-900 space-y-1">
+                    <div className="p-3 rounded-xl bg-white/90 border border-amber-200 text-amber-900 space-y-1">
                       <div className="flex justify-between">
                         <span>Closed on:</span>
                         <span className="font-bold">{formatDateStr(item.closedDate)}</span>
                       </div>
                       <div className="flex justify-between font-bold">
-                        <span>Net Profit:</span>
-                        <span>+₹{(pot - totalCost).toLocaleString('en-IN')}</span>
+                        <span>{pot - totalCost >= 0 ? 'Net Profit:' : 'Net Loss:'}</span>
+                        <span className={pot - totalCost >= 0 ? 'text-emerald-700' : 'text-rose-600'}>{pot - totalCost >= 0 ? '+' : '-'}₹{Math.abs(pot - totalCost).toLocaleString('en-IN')}</span>
                       </div>
                     </div>
                   ) : (
-                    <div className="p-2.5 rounded-xl bg-white/80 border border-yellow-200 flex justify-between text-yellow-900">
+                    <div className="p-2.5 rounded-xl bg-white/80 border border-amber-200 flex justify-between text-amber-900">
                       <span>Projected if not lifted:</span>
-                      <span className="font-bold text-emerald-800">
+                      <span className={`font-bold ${pot - totalCost >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
                         {pot - totalCost >= 0 ? '+' : '-'}₹{Math.abs(pot - totalCost).toLocaleString('en-IN')}
                       </span>
                     </div>
@@ -401,7 +410,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
 
                   {/* Note */}
                   {item.note && (
-                    <div className="text-[11px] text-yellow-900/80 italic">{item.note}</div>
+                    <div className="text-[11px] text-amber-900/80 italic">{item.note}</div>
                   )}
 
                   {/* Action Buttons */}
@@ -412,7 +421,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                           setLiftModalChit(item);
                           setLiftComm('');
                         }}
-                        className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-2xs hover:bg-emerald-700 active:scale-95 transition-all"
+                        className="flex-1 py-1.5 px-3 rounded-xl bg-amber-600 text-white font-bold text-xs shadow-2xs hover:bg-amber-700 active:scale-95 transition-all"
                       >
                         ✅ Lift
                       </button>
@@ -441,7 +450,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                           setFormDay(parts[2]);
                         }
                       }}
-                      className="w-8 h-8 rounded-xl bg-white border border-yellow-300 text-yellow-900 hover:bg-yellow-50 flex items-center justify-center transition-all"
+                      className="w-8 h-8 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-50 flex items-center justify-center transition-all"
                       title="Edit chit"
                     >
                       ✎
@@ -467,7 +476,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
           resetForm();
           setIsAddModalOpen(true);
         }}
-        className="w-full py-3 rounded-2xl bg-emerald-700 text-white font-display text-xs font-bold shadow-xs hover:bg-emerald-800 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+        className="w-full py-3 rounded-2xl bg-amber-700 text-white font-display text-xs font-bold shadow-xs hover:bg-amber-800 active:scale-95 transition-all flex items-center justify-center gap-1.5"
       >
         <span className="material-symbols-outlined text-[18px]">add</span>
         <span>+ Add Chit Fund</span>
@@ -633,7 +642,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl bg-emerald-700 text-white font-display font-bold text-xs shadow-xs hover:bg-emerald-800 transition-all"
+                className="w-full py-3 rounded-2xl bg-amber-700 text-white font-display font-bold text-xs shadow-xs hover:bg-amber-800 transition-all"
               >
                 {editingChit ? 'Update Chit' : 'Save Chit'}
               </button>
@@ -714,7 +723,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                 />
               </div>
 
-              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950">
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-950">
                 <div className="flex justify-between font-bold">
                   <span>Net Amount Received:</span>
                   <span>₹{(liftModalChit.pot - (parseFloat(liftComm) || 0)).toLocaleString('en-IN')}</span>
@@ -723,7 +732,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl bg-emerald-600 text-white font-display font-bold text-xs shadow-xs hover:bg-emerald-700 transition-all"
+                className="w-full py-3 rounded-2xl bg-amber-600 text-white font-display font-bold text-xs shadow-xs hover:bg-amber-700 transition-all"
               >
                 Confirm Lifted
               </button>

@@ -557,3 +557,30 @@ Development has used **Amazon Q Developer** and **ChatGPT / Codex** inside VS Co
 - **ChatGPT / Codex:** used to turn the product feedback into implementation steps, inspect and edit the React/TypeScript app and styles, connect the Fruits section to its weekly workflow, tune scrolling behavior, run the requested lint/build checks, and prepare this development summary.
 - **Git and GitHub:** used to track the source and built Pages output. The app changes were committed as `aaa27d9` and pushed to `origin/studio`; this DEVNOTES update is being recorded in its own commit.
 - Workflow: discuss the intended behavior, compare the UI with screenshots, implement a focused change in the app, verify the build, review the rendered result, and iterate from feedback.
+
+
+## 17 October 2026 - Chits, calculator and help redesign
+
+### UI and product flow
+- Changed Chits & Savings from green to light champagne/gold, including the Life OS entry, summary and individual chit cards. Updated the Groceries category wording to "Eat well" and removed its aggregate item badge.
+- Promoted the calculator into a highlighted feature card opening a viewport-sized dialog with two system choices: Dividend-Distributed (variable instalment) and Accumulated Dividend (fixed instalment).
+- Simplified the variable calculator into basic value/duration inputs, Save/Borrow intent, estimate/pasted-ledger choice, and an Advanced Settings accordion. Mobile fields stack; ledger tables scroll horizontally.
+- Moved educational content outside the calculator. Added two mutually exclusive help cards; the variable card contains four nested topics: core setup, auctions/dividends, month 1 and saver/borrower. Preserved the accumulated-dividend example and explanation.
+
+### Calculation and ledger behavior
+- Variable estimates use minimum/maximum group bidding amounts in rupees. Blank limits fall back to 15% of chit value; reversed limits are normalized. Generated group bids decrease linearly from the maximum in month 2 to the minimum in the final month. This is a projection, not a prediction of actual auctions.
+- Month 1 uses the full base installment and no dividend. Later payments subtract the member dividend after foreman commission. The post-lift dividend option controls whether later payments return to the full base amount.
+- Commission is editable with 0%, 2.5% and 5% presets; blank or zero means no commission. Presets are not labelled as legal limits. The small commission minimum hint is shown beside the focused personal bidding field, using the current percentage and calculated amount.
+- Withdrawal accepts months 1 through N. Blank/final-month withdrawal uses the saver calculation with zero auction cut; early withdrawal uses the entered personal discount, falling back to the maximum group bid, minus any separate payout fees. Actual agreement deductions may differ from these modelling assumptions.
+- Added a Post-Chit Tracking Ledger accepting newline/comma-separated payments. Missing months use the base installment and are identified as assumed in tracking summaries. Receipt overrides are supported for projected rows.
+- Added cumulative cash paid, total reductions/dividends, payout and net profit/loss. Profit uses green, borrowing cost/loss uses red and tracking reductions use blue. Added CSV export named nestd-chit-ledger.csv.
+- Latest visible table order: Month Number, Group Bid Cut, Member Dividend, Amount Paid, Cumulative Paid. CSV retains additional notes. Payout rows remain highlighted.
+- Fixed-mode work includes optional actual early closing month/final payment, zero/default handling, payout-month row highlighting and full-term totals. Positive results have a short sparkle effect and losses use red/thumb-down feedback; effects begin when the result becomes visible.
+- Calculation triggering changed during iteration: latest variable-mode behavior is live recalculation on input edits, per the later request. Fixed mode retains Calculate. The Calculate action remains available in the variable screen too.
+
+### Verification, tools and follow-up
+- Used ChatGPT/Codex, PowerShell, Node.js, React/TypeScript, Tailwind, Vite/npm and Git. Consulted official India Code material when reviewing commission and first-month claims. Stitch and Google AI Studio are part of the earlier design workflow; neither was invoked for these code edits.
+- Rebuilt the Pages bundle in docs/docs/ with npm.cmd run build:docs; latest build completed successfully. Existing large JavaScript chunk warning remains.
+- Calculator test cases were expanded during the earlier work, but the latest iterative changes were not retested. A production build does not establish financial correctness or visual verification on a physical phone. Review/update the test expectations before relying on this calculator for actual financial decisions.
+- Local Vite server currently available at http://localhost:3006/ (LAN http://192.168.29.7:3006/). Earlier servers occupied ports 3000-3005.
+- Follow-up: exercise saver/borrower endpoints, zero/fractional commission, reversed/blank ranges, receipt overrides, incomplete actual ledgers, rounding and CSV consistency. Refresh help text if calculator assumptions change.

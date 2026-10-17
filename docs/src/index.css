@@ -155,6 +155,38 @@ body {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@keyframes chitProfitReveal {
+  from { transform: scale(0.98); }
+  to { transform: scale(1); }
+}
+
+@keyframes chitProfitSparkle {
+  0% { opacity: 0; transform: translateY(8px) scale(0.3) rotate(-20deg); }
+  35% { opacity: 0.8; transform: translateY(-2px) scale(1) rotate(10deg); }
+  100% { opacity: 0; transform: translateY(-20px) scale(0.5) rotate(40deg); }
+}
+
+.chit-result-visible { animation: chitProfitReveal 300ms ease-out; }
+.chit-profit-sparkles > span {
+  position: absolute;
+  color: #b99038;
+  font-size: 14px;
+  opacity: 0;
+}
+.chit-result-visible .chit-profit-sparkles > span {
+  animation: chitProfitSparkle 1500ms ease-out 20 both;
+}
+
+@keyframes chitLossFeedback {
+  0% { opacity: 0; transform: translateY(-3px); }
+  5%, 95% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(0); }
+}
+.chit-loss-feedback { opacity: 0; }
+.chit-result-visible .chit-loss-feedback {
+  animation: chitLossFeedback 10s ease-out both;
+}
+
 .animate-screen-enter {
   animation: screenEnter 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -219,3 +251,7 @@ h1, h2, h3, h4, .font-display {
   -webkit-overflow-scrolling: touch;
 }
 
+
+@keyframes chit-results-reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.chit-results-reveal { animation: chit-results-reveal 220ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .chit-results-reveal { animation: none; } }
