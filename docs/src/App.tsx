@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { fbSignIn, fbSignOut, onAuthChange, syncToFirestore, listenFirestore, User } from './firebase';
+import { fbSignIn, fbSignOut, onAuthChange, syncToFirestore, listenFirestore, listenUserProfile, saveUserProfile, User } from './firebase';
 import {
   TabType,
   TodayTask,
@@ -8,11 +8,17 @@ import {
   BillItem,
   SubBillItem,
   GroceryItem,
+  GroceryPurchase,
+  ProduceCategory,
+  ProduceSchedule,
+  ProduceSchedules,
   QuickTaskCategory,
   AutomationLog,
   InvestmentItem,
   HealthItem,
   BusinessState,
+  UserProfile,
+  Weekday,
 } from './types';
 import {
   INITIAL_TODAY_TASKS,
@@ -43,6 +49,96 @@ import { GroceryManager } from './components/GroceryManager';
 import { InvestmentsManager } from './components/InvestmentsManager';
 import { HealthManager } from './components/HealthManager';
 import { BusinessManager } from './components/BusinessManager';
+
+const parsePurchaseAmount = (price?: string) => {
+  const amount = Number.parseFloat((price || '').replace(/,/g, ''));
+  return Number.isFinite(amount) ? amount : 0;
+};
+
+export const DEFAULT_PRODUCE_SCHEDULES: ProduceSchedules = {
+  vegetables: { restockDay: 4, marketDay: 5, autoRestock: true },
+  fruits: { restockDay: 3, marketDay: 3, autoRestock: true },
+};
+
+const normalizeProduceSchedules = (value: unknown): ProduceSchedules => {
+  const source = typeof value === 'object' && value !== null ? value as Record<string, unknown> : {};
+  const normalize = (key: ProduceCategory): ProduceSchedule => {
+    const saved = typeof source[key] === 'object' && source[key] !== null ? source[key] as Record<string, unknown> : {};
+    const fallback = DEFAULT_PRODUCE_SCHEDULES[key];
+    const day = (field: 'restockDay' | 'marketDay'): Weekday => {
+      const candidate = Number(saved[field]);
+      return Number.isInteger(candidate) && candidate >= 0 && candidate <= 6 ? candidate as Weekday : fallback[field];
+    };
+    return {
+      restockDay: day('restockDay'),
+      marketDay: day('marketDay'),
+      autoRestock: typeof saved.autoRestock === 'boolean' ? saved.autoRestock : fallback.autoRestock,
+    };
+  };
+  return { vegetables: normalize('vegetables'), fruits: normalize('fruits') };
+};
+
+const reactivateProduceForWeek = (
+  items: GroceryItem[],
+  purchases: GroceryPurchase[],
+  group: 'Vegetables' | 'Fruit',
+  schedule: ProduceSchedule,
+  now = new Date(),
+): GroceryItem[] => {
+  if (!schedule.autoRestock) return items;
+  const restockStart = new Date(now);
+  restockStart.setDate(restockStart.getDate() - ((restockStart.getDay() - schedule.restockDay + 7) % 7));
+  restockStart.setHours(0, 0, 0, 0);
+  const cutoff = restockStart.getTime();
+  const restockKey = `${restockStart.getFullYear()}-${String(restockStart.getMonth() + 1).padStart(2, '0')}-${String(restockStart.getDate()).padStart(2, '0')}`;
+  const latestPurchaseByItem = new Map<string, GroceryPurchase>();
+  purchases.forEach((purchase) => {
+    if (purchase.group !== group) return;
+    const existing = latestPurchaseByItem.get(purchase.itemId);
+    if (!existing || purchase.purchasedAt > existing.purchasedAt) latestPurchaseByItem.set(purchase.itemId, purchase);
+  });
+  let changed = false;
+
+  const nextItems = items.map((item) => {
+    if (item.group !== group || item.weeklyRestockKey === restockKey) return item;
+    const lastPurchase = latestPurchaseByItem.get(item.id);
+    let lastBought = lastPurchase?.purchasedAt || item.boughtTimestamp || 0;
+    if (!lastBought && item.boughtDate) {
+      const [year, month, day] = item.boughtDate.split('-').map(Number);
+      if (year && month && day) lastBought = new Date(year, month - 1, day).getTime();
+    }
+    if (!lastBought || lastBought >= cutoff) return item;
+
+    changed = true;
+    return {
+      ...item,
+      completed: false,
+      needed: true,
+      quantity: lastPurchase?.quantity || item.quantity,
+      buyNowStore: lastPurchase?.store || item.boughtStore || item.store,
+      price: '',
+      weeklyRestockKey: restockKey,
+    };
+  });
+
+  return changed ? nextItems : items;
+};
+
+const migrateLegacyGroceryPurchases = (items: GroceryItem[]): GroceryPurchase[] =>
+  items.filter((item) => item.completed).map((item) => {
+    const purchasedAt = item.boughtTimestamp || (item.boughtDate ? Date.parse(item.boughtDate) : 0) || Date.now();
+    return {
+      id: `legacy-${item.id}-${purchasedAt}`,
+      itemId: item.id,
+      name: item.name,
+      group: item.group,
+      quantity: item.quantity,
+      price: item.price,
+      amount: parsePurchaseAmount(item.price),
+      store: item.boughtStore || item.buyNowStore || item.store,
+      purchasedAt,
+    };
+  });
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('today');
@@ -109,6 +205,53 @@ export default function App() {
       return INITIAL_GROCERIES;
     }
   });
+  const [groceryPurchaseHistory, setGroceryPurchaseHistory] = useState<GroceryPurchase[]>(() => {
+    try {
+      const savedHistory = localStorage.getItem('nestd_grocery_purchase_history');
+      if (savedHistory) {
+        const parsed: unknown = JSON.parse(savedHistory);
+        if (Array.isArray(parsed)) return parsed as GroceryPurchase[];
+      }
+      const savedItems = localStorage.getItem('nestd_groceries_v2');
+      return savedItems ? migrateLegacyGroceryPurchases(JSON.parse(savedItems) as GroceryItem[]) : [];
+    } catch { return []; }
+  });
+  const [produceSchedules, setProduceSchedules] = useState<ProduceSchedules>(() => {
+    try {
+      const saved = localStorage.getItem('nestd_produce_schedules');
+      return normalizeProduceSchedules(saved ? JSON.parse(saved) : null);
+    } catch { return DEFAULT_PRODUCE_SCHEDULES; }
+  });
+  useEffect(() => {
+    const refreshWeeklyGroceryLists = () => setGroceryItems((previous) => reactivateProduceForWeek(
+      reactivateProduceForWeek(previous, groceryPurchaseHistory, 'Vegetables', produceSchedules.vegetables),
+      groceryPurchaseHistory,
+      'Fruit',
+      produceSchedules.fruits,
+    ));
+    refreshWeeklyGroceryLists();
+    const interval = window.setInterval(refreshWeeklyGroceryLists, 60_000);
+    const onVisible = () => { if (!document.hidden) refreshWeeklyGroceryLists(); };
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [groceryPurchaseHistory, produceSchedules]);
+  const [groceryStores, setGroceryStores] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('nestd_grocery_stores') || '[]').length
+      ? JSON.parse(localStorage.getItem('nestd_grocery_stores') || '[]')
+      : ['DMart', 'Ratnadeep', 'General Store', 'Organic Farm', 'Blinkit', 'Zepto', 'Local Mandi'];
+    } catch { return ['DMart', 'Ratnadeep', 'General Store', 'Organic Farm', 'Blinkit', 'Zepto', 'Local Mandi']; }
+  });
+  const [groceryCategories, setGroceryCategories] = useState<string[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('nestd_grocery_categories') || '[]');
+      return Array.isArray(saved) ? saved.filter((category) => typeof category === 'string') : [];
+    } catch { return []; }
+  });
 
   const [quickTasks, setQuickTasks] = useState<QuickTaskCategory[]>(() => {
     try {
@@ -165,33 +308,23 @@ export default function App() {
     }
   });
 
-  // Weekly veg reset key (Monday-anchored)
-  function getWeekKey(): string {
-    const d = new Date();
-    const t = new Date(d);
-    t.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // Monday
-    return `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
-  }
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    name: '',
+    gender: '',
+    dateOfBirth: '',
+    settings: { showStreak: true, personalizedGreeting: true },
+  });
+  const [fbUser, setFbUser] = useState<User | null>(null);
 
   function getTodayKey(): string {
     const d = new Date();
     return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   }
 
-  // roll() — weekly veg reset + daily streak update
+  // roll() — daily streak update
   useEffect(() => {
     const todayKey = getTodayKey();
-    const weekKey = getWeekKey();
-    const lastWeek = localStorage.getItem('nestd_week_key');
     const lastDay = localStorage.getItem('nestd_day_key');
-
-    // Weekly reset: uncomplete all vegetables on new week
-    if (lastWeek !== weekKey) {
-      setGroceryItems((prev) =>
-        prev.map((i) => (i.group === 'Vegetables' ? { ...i, completed: false, boughtDate: undefined, boughtTimestamp: undefined } : i))
-      );
-      localStorage.setItem('nestd_week_key', weekKey);
-    }
 
     // Daily streak: if all today tasks were completed yesterday, increment
     if (lastDay !== todayKey) {
@@ -214,7 +347,7 @@ export default function App() {
 
   // Modal / Drawer States
   const [activeDrawer, setActiveDrawer] = useState<
-    'chits' | 'emis' | 'bills' | 'grocery-shopping' | 'grocery-veg' | 'investments' | 'health' | 'business' | null
+    'chits' | 'emis' | 'bills' | 'grocery-shopping' | 'grocery-veg' | 'grocery-fruit' | 'investments' | 'health' | 'business' | null
   >(null);
 
   const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
@@ -246,16 +379,28 @@ export default function App() {
       localStorage.setItem('nestd_bills', JSON.stringify(bills));
       localStorage.setItem('nestd_sub_bills', JSON.stringify(subBills));
       localStorage.setItem('nestd_groceries_v2', JSON.stringify(groceryItems));
+      localStorage.setItem('nestd_grocery_purchase_history', JSON.stringify(groceryPurchaseHistory));
+      localStorage.setItem('nestd_produce_schedules', JSON.stringify(produceSchedules));
+      localStorage.setItem('nestd_grocery_stores', JSON.stringify(groceryStores));
+      localStorage.setItem('nestd_grocery_categories', JSON.stringify(groceryCategories));
       localStorage.setItem('nestd_quick_tasks', JSON.stringify(quickTasks));
       localStorage.setItem('nestd_automations', JSON.stringify(automations));
       localStorage.setItem('nestd_investments', JSON.stringify(investments));
       localStorage.setItem('nestd_health', JSON.stringify(healthItems));
       localStorage.setItem('nestd_business', JSON.stringify(business));
       localStorage.setItem('nestd_streak', JSON.stringify(streak));
+      if (fbUser) localStorage.setItem('nestd_local_owner_uid', fbUser.uid);
     } catch (e) {
       console.warn('Storage error', e);
     }
-  }, [todayTasks, chits, emis, bills, subBills, groceryItems, quickTasks, automations, investments, healthItems, business, streak]);
+  }, [todayTasks, chits, emis, bills, subBills, groceryItems, groceryPurchaseHistory, produceSchedules, groceryStores, groceryCategories, quickTasks, automations, investments, healthItems, business, streak, fbUser]);
+
+  const handleUpdateProduceSchedule = (category: ProduceCategory, updates: Partial<ProduceSchedule>) => {
+    setProduceSchedules((previous) => ({
+      ...previous,
+      [category]: { ...previous[category], ...updates },
+    }));
+  };
 
   // Today Tasks Handlers
   const handleToggleTask = (id: string) => {
@@ -408,6 +553,22 @@ export default function App() {
 
   // --- GROCERIES HANDLERS (matching docs/js/grocery.js) ---
   const handleToggleGroceryCompleted = (id: string, price?: string) => {
+    const itemBeingCompleted = groceryItems.find((item) => item.id === id);
+    if (itemBeingCompleted && !itemBeingCompleted.completed) {
+      const purchasedAt = Date.now();
+      const finalPrice = price !== undefined && price !== '' ? price : itemBeingCompleted.price;
+      setGroceryPurchaseHistory((prev) => [{
+        id: `purchase-${id}-${purchasedAt}`,
+        itemId: id,
+        name: itemBeingCompleted.name,
+        group: itemBeingCompleted.group,
+        quantity: itemBeingCompleted.quantity,
+        price: finalPrice,
+        amount: parsePurchaseAmount(finalPrice),
+        store: itemBeingCompleted.buyNowStore || itemBeingCompleted.store,
+        purchasedAt,
+      }, ...prev]);
+    }
     setGroceryItems((prev) =>
       prev.map((i) => {
         if (i.id === id) {
@@ -421,7 +582,9 @@ export default function App() {
           return {
             ...i,
             completed: nowCompleted,
+            needed: nowCompleted ? false : i.needed,
             price: price !== undefined && price !== '' ? price : i.price,
+            boughtStore: nowCompleted ? (i.buyNowStore || i.store) : i.boughtStore,
             boughtDate: nowCompleted ? today : i.boughtDate,
             boughtTimestamp: nowCompleted ? Date.now() : i.boughtTimestamp,
             lastBought: nowCompleted ? formatted : i.lastBought,
@@ -434,7 +597,13 @@ export default function App() {
 
   const handleToggleGroceryNeeded = (id: string) => {
     setGroceryItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, needed: !i.needed } : i))
+      prev.map((i) => (i.id === id ? {
+        ...i,
+        needed: !i.needed,
+        completed: !i.needed ? false : i.completed,
+        buyNowStore: !i.needed ? (i.boughtStore || i.store) : undefined,
+        ...(!i.needed ? { quantity: '', price: '', boughtDate: undefined, boughtTimestamp: undefined } : {}),
+      } : i))
     );
   };
 
@@ -450,7 +619,8 @@ export default function App() {
     store: string,
     needed: boolean,
     qty?: string,
-    price?: string
+    price?: string,
+    isInMaster = true
   ) => {
     const newItem: GroceryItem = {
       id: `g-${Date.now()}`,
@@ -459,11 +629,25 @@ export default function App() {
       store,
       needed,
       completed: false,
-      quantity: qty || '1 pack',
+      quantity: qty || '',
       price: price || '',
+      isInMaster,
+      buyNowStore: needed ? store : undefined,
     };
     setGroceryItems((prev) => [newItem, ...prev]);
-    showToast(`Added "${name}" to ${group}`);
+    showToast(isInMaster ? `Added "${name}" to your master list` : `Added "${name}" to Buy now`);
+  };
+
+  const handleAddGroceryStore = (store: string) => {
+    const cleanStore = store.trim();
+    if (!cleanStore) return;
+    setGroceryStores((prev) => prev.some((s) => s.toLowerCase() === cleanStore.toLowerCase()) ? prev : [...prev, cleanStore]);
+  };
+
+  const handleAddGroceryCategory = (category: string) => {
+    const cleanCategory = category.trim();
+    if (!cleanCategory) return;
+    setGroceryCategories((prev) => prev.some((item) => item.toLowerCase() === cleanCategory.toLowerCase()) ? prev : [...prev, cleanCategory]);
   };
 
   const handleDeleteGroceryItem = (id: string) => {
@@ -694,6 +878,10 @@ export default function App() {
     setBills(INITIAL_BILLS);
     setSubBills(INITIAL_SUB_BILLS);
     setGroceryItems(INITIAL_GROCERIES);
+    setGroceryPurchaseHistory([]);
+    setProduceSchedules(DEFAULT_PRODUCE_SCHEDULES);
+    setGroceryStores(['DMart', 'Ratnadeep', 'General Store', 'Organic Farm', 'Blinkit', 'Zepto', 'Local Mandi']);
+    setGroceryCategories([]);
     setQuickTasks(INITIAL_QUICK_TASKS);
     setAutomations(INITIAL_AUTOMATIONS);
     setInvestments(INITIAL_INVESTMENTS);
@@ -704,53 +892,146 @@ export default function App() {
   };
 
   // --- FIREBASE AUTH + FIRESTORE SYNC ---
-  const [fbUser, setFbUser] = useState<User | null>(null);
+  const [isCloudDataReady, setIsCloudDataReady] = useState(false);
   const firestoreUnsubRef = useRef<(() => void) | null>(null);
+  const profileUnsubRef = useRef<(() => void) | null>(null);
+  const activeAuthUidRef = useRef<string | null>(null);
+  const lastAccountUidRef = useRef<string | null>(null);
+  const lastSyncedDataRef = useRef<string | null>(null);
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetAccountDataState = () => {
+    setTodayTasks(INITIAL_TODAY_TASKS);
+    setChits(INITIAL_CHITS);
+    setEmis(INITIAL_EMIS);
+    setBills(INITIAL_BILLS);
+    setSubBills(INITIAL_SUB_BILLS);
+    setGroceryItems(INITIAL_GROCERIES);
+    setGroceryPurchaseHistory([]);
+    setProduceSchedules(DEFAULT_PRODUCE_SCHEDULES);
+    setGroceryStores(['DMart', 'Ratnadeep', 'General Store', 'Organic Farm', 'Blinkit', 'Zepto', 'Local Mandi']);
+    setGroceryCategories([]);
+    setQuickTasks(INITIAL_QUICK_TASKS);
+    setAutomations(INITIAL_AUTOMATIONS);
+    setInvestments(INITIAL_INVESTMENTS);
+    setHealthItems(INITIAL_HEALTH);
+    setBusiness(INITIAL_BUSINESS);
+    setStreak({ count: 0, last: '' });
+  };
 
   useEffect(() => {
     const unsubAuth = onAuthChange((user) => {
       setFbUser(user);
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+      }
+      lastSyncedDataRef.current = null;
       // Detach any previous Firestore listener
       if (firestoreUnsubRef.current) {
         firestoreUnsubRef.current();
         firestoreUnsubRef.current = null;
       }
+      if (profileUnsubRef.current) {
+        profileUnsubRef.current();
+        profileUnsubRef.current = null;
+      }
       if (user) {
+        const storedOwnerUid = localStorage.getItem('nestd_local_owner_uid');
+        const isChangingAccounts = (lastAccountUidRef.current && lastAccountUidRef.current !== user.uid)
+          || (storedOwnerUid && storedOwnerUid !== user.uid);
+        if (isChangingAccounts) resetAccountDataState();
+        activeAuthUidRef.current = user.uid;
+        lastAccountUidRef.current = user.uid;
+        localStorage.setItem('nestd_local_owner_uid', user.uid);
+        setIsCloudDataReady(false);
+        const accountName = user.displayName || user.email?.split('@')[0] || '';
+        setUserProfile({
+          name: accountName,
+          gender: '',
+          dateOfBirth: '',
+          settings: { showStreak: true, personalizedGreeting: true },
+        });
+        profileUnsubRef.current = listenUserProfile(user.uid, (remoteProfile) => {
+          if (!remoteProfile) return;
+          const remoteSettings = remoteProfile.settings as Partial<UserProfile['settings']> | undefined;
+          setUserProfile({
+            name: typeof remoteProfile.name === 'string' ? remoteProfile.name : accountName,
+            gender: remoteProfile.gender === 'female' || remoteProfile.gender === 'male' || remoteProfile.gender === 'non-binary' || remoteProfile.gender === 'prefer-not-to-say' ? remoteProfile.gender : '',
+            dateOfBirth: typeof remoteProfile.dateOfBirth === 'string' ? remoteProfile.dateOfBirth : '',
+            settings: {
+              showStreak: remoteSettings?.showStreak !== false,
+              personalizedGreeting: remoteSettings?.personalizedGreeting !== false,
+            },
+          });
+        });
         // Listen for remote changes and merge into local state
         firestoreUnsubRef.current = listenFirestore(user.uid, (json) => {
+          if (json === null) {
+            setIsCloudDataReady(true);
+            return;
+          }
           try {
             const remote = JSON.parse(json);
-            if (remote.groceries) setGroceryItems(remote.groceries);
-            if (remote.chits) setChits(remote.chits);
-            if (remote.emis) setEmis(remote.emis);
-            if (remote.bills) setBills(remote.bills);
-            if (remote.subBills) setSubBills(remote.subBills);
-            if (remote.quickTasks) setQuickTasks(remote.quickTasks);
-            if (remote.investments) setInvestments(remote.investments);
-            if (remote.healthItems) setHealthItems(remote.healthItems);
-            if (remote.business) setBusiness(remote.business);
-            if (remote.todayTasks) setTodayTasks(remote.todayTasks);
-            if (remote.streak) setStreak(remote.streak);
-          } catch {}
+            if (typeof remote !== 'object' || remote === null) return;
+            lastSyncedDataRef.current = json;
+            setGroceryItems(remote.groceries ?? INITIAL_GROCERIES);
+            setGroceryPurchaseHistory(Array.isArray(remote.groceryPurchaseHistory)
+              ? remote.groceryPurchaseHistory
+              : (Array.isArray(remote.groceries) ? migrateLegacyGroceryPurchases(remote.groceries) : []));
+            setProduceSchedules(normalizeProduceSchedules(remote.produceSchedules));
+            setGroceryStores(remote.groceryStores ?? ['DMart', 'Ratnadeep', 'General Store', 'Organic Farm', 'Blinkit', 'Zepto', 'Local Mandi']);
+            setGroceryCategories(Array.isArray(remote.groceryCategories) ? remote.groceryCategories : []);
+            setChits(remote.chits ?? INITIAL_CHITS);
+            setEmis(remote.emis ?? INITIAL_EMIS);
+            setBills(remote.bills ?? INITIAL_BILLS);
+            setSubBills(remote.subBills ?? INITIAL_SUB_BILLS);
+            setQuickTasks(remote.quickTasks ?? INITIAL_QUICK_TASKS);
+            setInvestments(remote.investments ?? INITIAL_INVESTMENTS);
+            setHealthItems(remote.healthItems ?? INITIAL_HEALTH);
+            setBusiness(remote.business ?? INITIAL_BUSINESS);
+            setTodayTasks(remote.todayTasks ?? INITIAL_TODAY_TASKS);
+            setStreak(remote.streak ?? { count: 0, last: '' });
+            setIsCloudDataReady(true);
+          } catch {
+            showToast('Could not read this account’s saved data. Sync is paused.');
+          }
         });
+      } else {
+        setIsCloudDataReady(false);
+        if (activeAuthUidRef.current) {
+          resetAccountDataState();
+          setUserProfile({ name: '', gender: '', dateOfBirth: '', settings: { showStreak: true, personalizedGreeting: true } });
+          localStorage.removeItem('nestd_local_owner_uid');
+          activeAuthUidRef.current = null;
+        }
       }
     });
-    return () => { unsubAuth(); if (firestoreUnsubRef.current) firestoreUnsubRef.current(); };
+    return () => {
+      unsubAuth();
+      if (firestoreUnsubRef.current) firestoreUnsubRef.current();
+      if (profileUnsubRef.current) profileUnsubRef.current();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounced Firestore push on any state change when signed in
-  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Debounced Firestore push only after this account's first snapshot has loaded.
   useEffect(() => {
-    if (!fbUser) return;
+    if (!fbUser || !isCloudDataReady) return;
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    const data = {
+      groceries: groceryItems, groceryPurchaseHistory, produceSchedules, groceryStores, groceryCategories, chits, emis, bills, subBills,
+      quickTasks, investments, healthItems, business, todayTasks, streak,
+    };
+    const serializedData = JSON.stringify(data);
+    if (serializedData === lastSyncedDataRef.current) return;
     syncTimerRef.current = setTimeout(() => {
-      syncToFirestore(fbUser.uid, {
-        groceries: groceryItems, chits, emis, bills, subBills,
-        quickTasks, investments, healthItems, business, todayTasks, streak,
-      }).catch(() => {});
+      lastSyncedDataRef.current = serializedData;
+      syncToFirestore(fbUser.uid, data).catch(() => {
+        if (lastSyncedDataRef.current === serializedData) lastSyncedDataRef.current = null;
+      });
     }, 800);
-  }, [groceryItems, chits, emis, bills, subBills, quickTasks, investments, healthItems, business, todayTasks, streak, fbUser]);
+  }, [groceryItems, groceryPurchaseHistory, produceSchedules, groceryStores, groceryCategories, chits, emis, bills, subBills, quickTasks, investments, healthItems, business, todayTasks, streak, fbUser, isCloudDataReady]);
 
   const handleSignIn = () => {
     fbSignIn().catch((e) => showToast('Sign-in failed: ' + e.message));
@@ -758,6 +1039,13 @@ export default function App() {
 
   const handleSignOut = () => {
     fbSignOut().then(() => showToast('Signed out')).catch(() => {});
+  };
+
+  const handleSaveUserProfile = async (profile: UserProfile) => {
+    if (!fbUser) return;
+    await saveUserProfile(fbUser.uid, profile);
+    setUserProfile(profile);
+    showToast('Profile saved');
   };
 
   const uncompletedTasksCount = todayTasks.filter((t) => !t.completed).length;
@@ -816,19 +1104,30 @@ export default function App() {
         } h-full max-h-[100dvh] sm:h-[min(94dvh,880px)] sm:max-h-[96dvh] bg-surface flex flex-col relative sm:rounded-[36px] sm:border sm:border-slate-300/80 sm:shadow-2xl overflow-hidden transition-all duration-200`}
       >
         {/* Scrollable Content Viewport */}
-        <div ref={scrollContainerRef} onScroll={(event) => setIsHeaderCompact(event.currentTarget.scrollTop > 36)} className="app-scroll flex-1 overflow-y-auto overscroll-y-contain w-full min-h-0 flex flex-col">
+        <div
+          ref={scrollContainerRef}
+          onScroll={(event) => {
+            const scrollTop = event.currentTarget.scrollTop;
+            setIsHeaderCompact((currentlyCompact) => currentlyCompact ? scrollTop > 18 : scrollTop > 48);
+          }}
+          className="app-scroll flex-1 overflow-y-auto overscroll-y-contain w-full min-h-0 flex flex-col"
+        >
           <div key={currentTab} className="w-full flex flex-col flex-1 animate-screen-enter">
           <Header
             currentTab={currentTab}
             onOpenProfile={() => setIsProfileModalOpen(true)}
             user={fbUser}
+            profileName={userProfile.name}
             compact={isHeaderCompact}
           />
           {currentTab === 'today' && (
             <TodayScreen
               tasks={todayTasks}
               streak={streak.count}
-              userName={fbUser?.displayName || 'Jeevan'}
+              showStreak={userProfile.settings.showStreak}
+              userName={userProfile.settings.personalizedGreeting
+                ? userProfile.name || fbUser?.displayName || fbUser?.email?.split('@')[0] || 'You'
+                : 'You'}
               userPhoto={fbUser?.photoURL || undefined}
               onToggleTask={handleToggleTask}
               onAddTask={handleAddTodayTask}
@@ -840,9 +1139,10 @@ export default function App() {
           {currentTab === 'lists' && (
             <ListsScreen
               groceryItems={groceryItems}
+              produceSchedules={produceSchedules}
               onToggleGroceryItem={handleToggleGroceryCompleted}
               onOpenGroceryDetail={(category) =>
-                setActiveDrawer(category === 'V' ? 'grocery-veg' : 'grocery-shopping')
+                setActiveDrawer(category === 'V' ? 'grocery-veg' : category === 'F' ? 'grocery-fruit' : 'grocery-shopping')
               }
               chits={chits}
               onOpenChits={() => setActiveDrawer('chits')}
@@ -1026,22 +1326,24 @@ export default function App() {
       )}
 
       {/* GROCERIES MANAGER DRAWER (Matches docs/js/grocery.js Category C & V) */}
-      {(activeDrawer === 'grocery-shopping' || activeDrawer === 'grocery-veg') && (
+      {(activeDrawer === 'grocery-shopping' || activeDrawer === 'grocery-veg' || activeDrawer === 'grocery-fruit') && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[92vh] flex flex-col border border-slate-200 shadow-2xl overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-300/40 flex items-center justify-center text-lg">
-                  {activeDrawer === 'grocery-veg' ? '🥬' : '🛒'}
+                  {activeDrawer === 'grocery-veg' ? '🥬' : activeDrawer === 'grocery-fruit' ? '🍍' : '🛒'}
                 </div>
                 <div>
                   <h3 className="font-display font-extrabold text-base text-slate-900">
-                    {activeDrawer === 'grocery-veg' ? 'Weekly Vegetables' : 'Shopping & Staples'}
+                    {activeDrawer === 'grocery-veg' ? 'Weekly Vegetables' : activeDrawer === 'grocery-fruit' ? 'Weekly Fruits' : 'Shopping & Staples'}
                   </h3>
                   <p className="text-[11px] text-slate-500 font-medium">
                     {activeDrawer === 'grocery-veg'
-                      ? 'Friday/Saturday mandi checklist & spend tracker'
-                      : 'Active Buy now list, master catalog & purchase history'}
+                      ? 'Weekly produce checklist & purchase history'
+                      : activeDrawer === 'grocery-fruit'
+                        ? 'Weekly fruit checklist & purchase history'
+                        : 'Active Buy now list, master catalog & purchase history'}
                   </p>
                 </div>
               </div>
@@ -1056,12 +1358,19 @@ export default function App() {
             <div className="flex-1 overflow-y-auto p-4">
               <GroceryManager
                 items={groceryItems}
+                purchases={groceryPurchaseHistory}
+                produceSchedules={produceSchedules}
+                onUpdateProduceSchedule={handleUpdateProduceSchedule}
+                stores={groceryStores}
+                onAddStore={handleAddGroceryStore}
+                customCategories={groceryCategories}
+                onAddCategory={handleAddGroceryCategory}
                 onToggleCompleted={handleToggleGroceryCompleted}
                 onToggleNeeded={handleToggleGroceryNeeded}
                 onAddItem={handleAddGroceryItem}
                 onUpdateItem={handleUpdateGroceryItem}
                 onDeleteItem={handleDeleteGroceryItem}
-                initialCategory={activeDrawer === 'grocery-veg' ? 'V' : 'C'}
+                initialCategory={activeDrawer === 'grocery-veg' ? 'V' : activeDrawer === 'grocery-fruit' ? 'F' : 'C'}
               />
             </div>
           </div>
@@ -1211,7 +1520,7 @@ export default function App() {
         initialQuickTaskCategoryId={newEntryModalConfig.quickTaskCategoryId}
         quickTaskCategories={quickTasks}
         onAddGrocery={(name, store, cat) =>
-          handleAddGroceryItem(name, cat === 'pantry' ? 'Staples / food' : 'Vegetables', store, true)
+          handleAddGroceryItem(name, cat === 'pantry' ? 'Staples / food' : 'Vegetables', store, true, '', '', false)
         }
         onAddLifeOSEntry={(title, _sub, amount) => {
           const monthlyAmount = Number(amount);
@@ -1237,6 +1546,8 @@ export default function App() {
         onClose={() => setIsProfileModalOpen(false)}
         onResetData={handleResetData}
         user={fbUser}
+        profile={userProfile}
+        onSaveProfile={handleSaveUserProfile}
         streak={streak.count}
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}

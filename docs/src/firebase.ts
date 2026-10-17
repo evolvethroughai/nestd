@@ -32,16 +32,28 @@ export function getUserDocRef(uid: string) {
   return doc(db, 'users', uid, 'data', 'state');
 }
 
+export function saveUserProfile(uid: string, profile: object) {
+  return setDoc(doc(db, 'users', uid, 'data', 'profile'), profile);
+}
+
+export function listenUserProfile(uid: string, cb: (profile: Record<string, unknown> | null) => void): Unsubscribe {
+  return onSnapshot(doc(db, 'users', uid, 'data', 'profile'), (snap) => {
+    cb(snap.exists() ? snap.data() : null);
+  });
+}
+
 export function syncToFirestore(uid: string, data: object) {
   const ref = getUserDocRef(uid);
   return setDoc(ref, { json: JSON.stringify(data) });
 }
 
-export function listenFirestore(uid: string, cb: (json: string) => void): Unsubscribe {
+export function listenFirestore(uid: string, cb: (json: string | null) => void): Unsubscribe {
   const ref = getUserDocRef(uid);
   return onSnapshot(ref, (snap) => {
     if (snap.exists() && snap.data()?.json) {
       cb(snap.data()!.json as string);
+    } else {
+      cb(null);
     }
   });
 }

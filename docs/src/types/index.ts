@@ -1,5 +1,15 @@
 export type TabType = 'today' | 'lists' | 'ask';
 
+export interface UserProfile {
+  name: string;
+  gender: 'female' | 'male' | 'non-binary' | 'prefer-not-to-say' | '';
+  dateOfBirth: string;
+  settings: {
+    showStreak: boolean;
+    personalizedGreeting: boolean;
+  };
+}
+
 export interface TodayTask {
   id: string;
   title: string;
@@ -112,8 +122,14 @@ export interface BillItem {
 export interface GroceryItem {
   id: string;
   name: string;
-  group: 'Staples / food' | 'Household / personal' | 'Pooja' | 'Fruit' | 'Nuts, seeds and snacks' | 'Vegetables';
+  group: 'Staples / food' | 'Household / personal' | 'Pooja' | 'Fruit' | 'Nuts, seeds and snacks' | 'Vegetables' | (string & {});
   store?: string;
+  /** Whether this item belongs to the reusable master catalog. */
+  isInMaster?: boolean;
+  /** Store selected for the active shopping trip. */
+  buyNowStore?: string;
+  /** Store where the most recent purchase was completed. */
+  boughtStore?: string;
   needed: boolean; // Buy now flag (matching x.n)
   completed: boolean; // Marked bought / done (matching x.d)
   quantity?: string; // e.g. "2 kg", "500 g"
@@ -121,6 +137,32 @@ export interface GroceryItem {
   boughtDate?: string; // e.g. "2026-10-12"
   boughtTimestamp?: number;
   lastBought?: string; // e.g. "12 Oct 2026"
+  weeklyRestockKey?: string; // Restock-day date when produce was queued for this cycle
+}
+
+/** A durable record for one completed grocery purchase. */
+export interface GroceryPurchase {
+  id: string;
+  itemId: string;
+  name: string;
+  group: GroceryItem['group'];
+  quantity?: string;
+  price?: string;
+  amount: number;
+  store?: string;
+  purchasedAt: number;
+}
+
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+export type ProduceCategory = 'vegetables' | 'fruits';
+export interface ProduceSchedule {
+  restockDay: Weekday;
+  marketDay: Weekday;
+  autoRestock: boolean;
+}
+export interface ProduceSchedules {
+  vegetables: ProduceSchedule;
+  fruits: ProduceSchedule;
 }
 
 // --- QUICK TASKS ---

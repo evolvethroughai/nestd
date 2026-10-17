@@ -12,6 +12,7 @@ import {
   BusinessState,
   CustomCategory,
   CustomCategoryItem,
+  ProduceSchedules,
 } from '../types';
 
 const AUTO_EMOJI_RULES: Array<[RegExp, string]> = [
@@ -59,7 +60,7 @@ const AccordionContent: React.FC<{ open: boolean; className: string; children: R
   <div
     aria-hidden={!open}
     inert={!open}
-    className={`grid overflow-hidden transition-[grid-template-rows] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+    className={`grid overflow-hidden transition-[grid-template-rows] duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
   >
     <div className="min-h-0 overflow-hidden">
         <div data-accordion-open={open} className={`accordion-fold-content pt-4 ${className}`}>
@@ -78,8 +79,9 @@ function dueDaysFromDay(dueDay: number): number {
 
 interface ListsScreenProps {
   groceryItems: GroceryItem[];
+  produceSchedules: ProduceSchedules;
   onToggleGroceryItem: (id: string) => void;
-  onOpenGroceryDetail: (category: 'C' | 'V') => void;
+  onOpenGroceryDetail: (category: 'C' | 'V' | 'F') => void;
   chits: ChitItem[];
   onOpenChits: () => void;
   emis: EmiLoanItem[];
@@ -102,6 +104,7 @@ interface ListsScreenProps {
 
 export const ListsScreen: React.FC<ListsScreenProps> = ({
   groceryItems,
+  produceSchedules,
   onToggleGroceryItem,
   onOpenGroceryDetail,
   chits,
@@ -284,9 +287,13 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
     }));
   };
 
-  const nonVegItems = groceryItems.filter((g) => g.group !== 'Vegetables');
+  const nonVegItems = groceryItems.filter((g) => g.group !== 'Vegetables' && g.isInMaster !== false);
   const buyNowCount = nonVegItems.filter((g) => g.needed && !g.completed).length;
   const pendingVegCount = groceryItems.filter((g) => g.group === 'Vegetables' && !g.completed).length;
+  const pendingFruitCount = groceryItems.filter((g) => g.group === 'Fruit' && !g.completed).length;
+  const fruitItemCount = groceryItems.filter((g) => g.group === 'Fruit').length;
+  const totalGroceryCount = groceryItems.filter((item) => item.group === 'Vegetables' || item.group === 'Fruit' || item.isInMaster !== false).length;
+  const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   const activeChits = chits.filter((c) => c.status !== 'done');
   const activeEmis = emis.filter((e) => e.status !== 'closed');
@@ -339,23 +346,23 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         <div
           data-list-section-header="groceries"
           onClick={() => toggleSection('groceries')}
-          className={`list-section-sticky group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'groceries' ? 'px-3 py-2 border border-amber-200 bg-amber-50 text-amber-950 shadow-md' : 'px-3.5 py-3.5 border border-amber-700 bg-gradient-to-r from-amber-800 via-amber-700 to-amber-600 text-white shadow-md shadow-amber-900/15 hover:shadow-lg'}`}
+          className={`list-section-sticky ${pinnedListCategory === 'groceries' ? 'is-pinned' : ''} group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-160 ${pinnedListCategory === 'groceries' ? 'px-3 py-2 border border-amber-200 bg-amber-50 text-amber-950 shadow-md' : 'px-3.5 py-3.5 border border-amber-700 bg-gradient-to-r from-amber-800 via-amber-700 to-amber-600 text-white shadow-md shadow-amber-900/15 hover:shadow-lg'}`}
         >
           <div className="flex items-center gap-3">
-            <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-300 ${pinnedListCategory === 'groceries' ? 'w-8 h-8 bg-white border border-amber-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
+            <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-160 ${pinnedListCategory === 'groceries' ? 'w-8 h-8 bg-white border border-amber-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
               {sectionLabels.groceries.icon}
             </div>
             <div>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className={`font-extrabold uppercase tracking-tight transition-all duration-300 ${pinnedListCategory === 'groceries' ? 'text-[9px] text-amber-700' : 'text-[11px] text-white/80'}`}>
+                <span className={`font-extrabold uppercase tracking-tight transition-all duration-160 ${pinnedListCategory === 'groceries' ? 'text-[9px] text-amber-700' : 'text-[11px] text-white/80'}`}>
                   {sectionLabels.groceries.subtitle}
                 </span>
                 <span className={`w-1 h-1 rounded-full ${pinnedListCategory === 'groceries' ? 'bg-amber-400' : 'bg-white/60'}`} />
                 <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${pinnedListCategory === 'groceries' ? 'bg-amber-100 text-amber-800' : 'bg-white/15 text-white'}`}>
-                  {groceryItems.length} items
+                  {totalGroceryCount} items
                 </span>
               </div>
-              <h2 className={`font-bold font-display tracking-tight leading-none mt-0.5 transition-all duration-300 ${pinnedListCategory === 'groceries' ? 'text-base text-amber-950' : 'text-xl text-white'}`}>
+              <h2 className={`font-bold font-display tracking-tight leading-none mt-0.5 transition-all duration-160 ${pinnedListCategory === 'groceries' ? 'text-base text-amber-950' : 'text-xl text-white'}`}>
                 {sectionLabels.groceries.title}
               </h2>
             </div>
@@ -363,7 +370,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
 
           <div className="flex items-center gap-2">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${pinnedListCategory === 'groceries' ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-white/15 text-white hover:bg-white/25'} ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-160 shrink-0 ${pinnedListCategory === 'groceries' ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-white/15 text-white hover:bg-white/25'} ${
                 collapsedSections.groceries ? '' : 'rotate-180'
               }`}
             >
@@ -450,7 +457,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                       )}
                     </div>
                     <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
-                      Buy on Friday or Saturday · Budget: ₹600–₹800
+                      Shop on {weekdayNames[produceSchedules.vegetables.marketDay]} · Weekly produce list
                     </p>
                   </div>
                 </div>
@@ -471,7 +478,35 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                 </span>
               </div>
             </div>
-          </div>
+            {/* Card 3: Weekly fruits */}
+            <div
+              onClick={() => onOpenGroceryDetail('F')}
+              className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-rose-200 bg-gradient-to-br from-rose-50 to-white hover:border-rose-300 shadow-2xs hover:shadow-md active:scale-[0.99]"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-300/40 flex items-center justify-center text-2xl shadow-2xs group-hover:scale-105 transition-transform shrink-0">🍍</div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-display text-base font-bold text-slate-900">Fruits</h3>
+                      {pendingFruitCount > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-900 text-[11px] font-extrabold">{pendingFruitCount} to pick up</span>
+                      ) : fruitItemCount > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-rose-700 text-[11px] font-bold">All bought for week</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-bold">Add fruit list</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">Shop on {weekdayNames[produceSchedules.fruits.marketDay]} · Weekly fruit list</p>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined ml-2 shrink-0 text-slate-400 group-hover:translate-x-0.5 group-hover:text-rose-600 transition-all text-[22px]">chevron_right</span>
+              </div>
+              <div className="mt-2.5 pt-2 border-t border-rose-100 flex items-center justify-between text-[11px]">
+                <span className="text-slate-400 font-medium">Weekly fruit reminder & purchase history</span>
+                <span className="text-rose-700 font-bold group-hover:underline">Open fruit list ›</span>
+              </div>
+            </div>          </div>
         </AccordionContent>
       </section>
 
@@ -480,15 +515,15 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         <div
           data-list-section-header="lifeos"
           onClick={() => toggleSection('lifeos')}
-          className={`list-section-sticky group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'lifeos' ? 'px-3 py-2 border border-emerald-200 bg-emerald-50 text-emerald-950 shadow-md' : 'px-3.5 py-3.5 border border-emerald-700 bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-600 text-white shadow-md shadow-emerald-900/15 hover:shadow-lg'}`}
+          className={`list-section-sticky ${pinnedListCategory === 'lifeos' ? 'is-pinned' : ''} group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-160 ${pinnedListCategory === 'lifeos' ? 'px-3 py-2 border border-emerald-200 bg-emerald-50 text-emerald-950 shadow-md' : 'px-3.5 py-3.5 border border-emerald-700 bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-600 text-white shadow-md shadow-emerald-900/15 hover:shadow-lg'}`}
         >
           <div className="flex items-center gap-3">
-            <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-300 ${pinnedListCategory === 'lifeos' ? 'w-8 h-8 bg-white border border-emerald-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
+            <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-160 ${pinnedListCategory === 'lifeos' ? 'w-8 h-8 bg-white border border-emerald-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
               {sectionLabels.lifeos.icon}
             </div>
             <div>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className={`font-extrabold uppercase tracking-tight transition-all duration-300 ${pinnedListCategory === 'lifeos' ? 'text-[9px] text-emerald-700' : 'text-[11px] text-white/80'}`}>
+                <span className={`font-extrabold uppercase tracking-tight transition-all duration-160 ${pinnedListCategory === 'lifeos' ? 'text-[9px] text-emerald-700' : 'text-[11px] text-white/80'}`}>
                   {sectionLabels.lifeos.subtitle}
                 </span>
                 <span className={`w-1 h-1 rounded-full ${pinnedListCategory === 'lifeos' ? 'bg-emerald-400' : 'bg-white/60'}`} />
@@ -496,7 +531,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                   Peace of mind
                 </span>
               </div>
-              <h2 className={`font-bold font-display tracking-tight leading-none mt-0.5 transition-all duration-300 ${pinnedListCategory === 'lifeos' ? 'text-base text-emerald-950' : 'text-xl text-white'}`}>
+              <h2 className={`font-bold font-display tracking-tight leading-none mt-0.5 transition-all duration-160 ${pinnedListCategory === 'lifeos' ? 'text-base text-emerald-950' : 'text-xl text-white'}`}>
                 {sectionLabels.lifeos.title}
               </h2>
             </div>
@@ -504,7 +539,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
 
           <div className="flex items-center gap-2">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${pinnedListCategory === 'lifeos' ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-white/15 text-white hover:bg-white/25'} ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-160 shrink-0 ${pinnedListCategory === 'lifeos' ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-white/15 text-white hover:bg-white/25'} ${
                 collapsedSections.lifeos ? '' : 'rotate-180'
               }`}
             >
@@ -804,15 +839,15 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         <div
           data-list-section-header="quicktasks"
           onClick={() => toggleSection('quicktasks')}
-          className={`list-section-sticky group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === 'quicktasks' ? 'px-3 py-2 border border-purple-200 bg-purple-50 text-purple-950 shadow-md' : 'px-3.5 py-3.5 border border-purple-700 bg-gradient-to-r from-purple-800 via-purple-700 to-purple-600 text-white shadow-md shadow-purple-900/15 hover:shadow-lg'}`}
+          className={`list-section-sticky ${pinnedListCategory === 'quicktasks' ? 'is-pinned' : ''} group flex items-center justify-between gap-2 rounded-2xl cursor-pointer select-none active:scale-[0.99] transition-[padding,color,background-color,border-color,box-shadow] duration-160 ${pinnedListCategory === 'quicktasks' ? 'px-3 py-2 border border-purple-200 bg-purple-50 text-purple-950 shadow-md' : 'px-3.5 py-3.5 border border-purple-700 bg-gradient-to-r from-purple-800 via-purple-700 to-purple-600 text-white shadow-md shadow-purple-900/15 hover:shadow-lg'}`}
         >
           <div className="flex items-center gap-3">
-            <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-300 ${pinnedListCategory === 'quicktasks' ? 'w-8 h-8 bg-white border border-purple-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
+            <div className={`rounded-xl flex items-center justify-center text-xl shadow-2xs shrink-0 group-hover:scale-105 transition-all duration-160 ${pinnedListCategory === 'quicktasks' ? 'w-8 h-8 bg-white border border-purple-200' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>
               {sectionLabels.quicktasks.icon}
             </div>
             <div>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className={`font-extrabold uppercase tracking-tight transition-all duration-300 ${pinnedListCategory === 'quicktasks' ? 'text-[9px] text-purple-700' : 'text-[11px] text-white/80'}`}>
+                <span className={`font-extrabold uppercase tracking-tight transition-all duration-160 ${pinnedListCategory === 'quicktasks' ? 'text-[9px] text-purple-700' : 'text-[11px] text-white/80'}`}>
                   {sectionLabels.quicktasks.subtitle}
                 </span>
                 <span className={`w-1 h-1 rounded-full ${pinnedListCategory === 'quicktasks' ? 'bg-purple-400' : 'bg-white/60'}`} />
@@ -820,7 +855,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                   {quickTasks.reduce((acc, q) => acc + q.tasksCount, 0)} active
                 </span>
               </div>
-              <h2 className={`font-bold font-display tracking-tight leading-none mt-0.5 transition-all duration-300 ${pinnedListCategory === 'quicktasks' ? 'text-base text-purple-950' : 'text-xl text-white'}`}>
+              <h2 className={`font-bold font-display tracking-tight leading-none mt-0.5 transition-all duration-160 ${pinnedListCategory === 'quicktasks' ? 'text-base text-purple-950' : 'text-xl text-white'}`}>
                 {sectionLabels.quicktasks.title}
               </h2>
             </div>
@@ -828,7 +863,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
 
           <div className="flex items-center gap-2">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${pinnedListCategory === 'quicktasks' ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-white/15 text-white hover:bg-white/25'} ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-160 shrink-0 ${pinnedListCategory === 'quicktasks' ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-white/15 text-white hover:bg-white/25'} ${
                 collapsedSections.quicktasks ? '' : 'rotate-180'
               }`}
             >
@@ -918,18 +953,18 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
               aria-expanded={!collapsedSections[sec.id]}
               onClick={() => toggleSection(sec.id)}
               onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleSection(sec.id); } }}
-              className={`list-section-sticky flex items-center justify-between gap-3 rounded-2xl cursor-pointer select-none shadow-sm transition-[padding,color,background-color,border-color,box-shadow] duration-300 ${pinnedListCategory === sec.id ? `border ${colors.border} px-3 py-2 ${colors.itemBg} ${colors.text}` : `px-3 py-3 text-white ${colors.header}`}`}
+              className={`list-section-sticky ${pinnedListCategory === sec.id ? 'is-pinned' : ''} flex items-center justify-between gap-3 rounded-2xl cursor-pointer select-none shadow-sm transition-[padding,color,background-color,border-color,box-shadow] duration-160 ${pinnedListCategory === sec.id ? `border ${colors.border} px-3 py-2 ${colors.itemBg} ${colors.text}` : `px-3 py-3 text-white ${colors.header}`}`}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className={`rounded-xl flex items-center justify-center text-xl shrink-0 transition-all duration-300 ${pinnedListCategory === sec.id ? 'w-8 h-8 bg-white border border-black/5' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>{sec.icon}</div>
+                <div className={`rounded-xl flex items-center justify-center text-xl shrink-0 transition-all duration-160 ${pinnedListCategory === sec.id ? 'w-8 h-8 bg-white border border-black/5' : 'w-10 h-10 bg-white/15 border border-white/20'}`}>{sec.icon}</div>
                 <div className="min-w-0">
-                  <span className={`font-extrabold uppercase tracking-tight transition-all duration-300 ${pinnedListCategory === sec.id ? 'text-[9px] opacity-70' : 'text-[11px] text-white/80'}`}>{sec.subtitle}</span>
-                  <h2 className={`font-bold font-display tracking-tight leading-tight transition-all duration-300 ${pinnedListCategory === sec.id ? 'text-base' : 'text-xl text-white'}`}>{sec.title}</h2>
+                  <span className={`font-extrabold uppercase tracking-tight transition-all duration-160 ${pinnedListCategory === sec.id ? 'text-[9px] opacity-70' : 'text-[11px] text-white/80'}`}>{sec.subtitle}</span>
+                  <h2 className={`font-bold font-display tracking-tight leading-tight transition-all duration-160 ${pinnedListCategory === sec.id ? 'text-base' : 'text-xl text-white'}`}>{sec.title}</h2>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`px-2 py-1 rounded-full text-[11px] font-bold ${pinnedListCategory === sec.id ? 'bg-white text-current' : 'bg-white/15 text-white'}`}>{sec.items.filter((item) => !item.completed).length} open</span>
-                <span className={`material-symbols-outlined transition-transform duration-300 ${collapsedSections[sec.id] ? '' : 'rotate-180'}`}>keyboard_arrow_down</span>
+                <span className={`material-symbols-outlined transition-transform duration-160 ${collapsedSections[sec.id] ? '' : 'rotate-180'}`}>keyboard_arrow_down</span>
               </div>
             </div>
             <AccordionContent open={!collapsedSections[sec.id]} className={`ml-2 border-l-2 pl-3 ${colors.border}`}>
