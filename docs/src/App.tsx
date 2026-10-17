@@ -144,10 +144,12 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('today');
   const [isHeaderCompact, setIsHeaderCompact] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const headerScrollRef = useRef({ top: 0, travel: 0 });
   const [viewMode, setViewMode] = useState<'phone' | 'phone-max' | 'fluid'>('phone-max');
 
   useEffect(() => {
     setIsHeaderCompact(false);
+    headerScrollRef.current = { top: 0, travel: 0 };
     scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentTab]);
 
@@ -1108,7 +1110,12 @@ export default function App() {
           ref={scrollContainerRef}
           onScroll={(event) => {
             const scrollTop = event.currentTarget.scrollTop;
-            setIsHeaderCompact((currentlyCompact) => currentlyCompact ? scrollTop > 18 : scrollTop > 48);
+            const previous = headerScrollRef.current;
+            const delta = scrollTop - previous.top;
+            const travel = Math.sign(delta) === Math.sign(previous.travel) ? previous.travel + delta : delta;
+            headerScrollRef.current = { top: scrollTop, travel };
+            if (scrollTop <= 24 || travel < -12) setIsHeaderCompact(false);
+            else if (scrollTop > 24 && travel > 12) setIsHeaderCompact(true);
           }}
           className="app-scroll flex-1 overflow-y-auto overscroll-y-contain w-full min-h-0 flex flex-col"
         >
@@ -1213,7 +1220,7 @@ export default function App() {
           <div className="bg-surface-container-lowest rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[90vh] flex flex-col border border-outline-variant/30 shadow-2xl overflow-hidden">
             <div className="p-4 border-b border-outline-variant/20 flex items-center justify-between bg-surface-container-low/40">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-lg">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center text-lg">
                   💰
                 </div>
                 <div>
@@ -1221,7 +1228,7 @@ export default function App() {
                     Chits & Savings Manager
                   </h3>
                   <p className="text-[11px] text-on-surface-variant font-medium">
-                    Auction cycles, lifting profit & universal calculator
+                    Payments, payouts & chit planning
                   </p>
                 </div>
               </div>

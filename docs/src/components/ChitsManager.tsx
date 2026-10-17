@@ -1,5 +1,6 @@
+import { ChitCalculator } from './ChitCalculator';
 import React, { useState } from 'react';
-import { ChitItem, ChitCalculation } from '../types';
+import { ChitItem } from '../types';
 
 interface ChitsManagerProps {
   chits: ChitItem[];
@@ -20,17 +21,6 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
   const [openCards, setOpenCards] = useState<Record<string, boolean>>({
     'ch-1': true,
   });
-
-  // Chit Calculator toggle & state
-  const [isCalcOpen, setIsCalcOpen] = useState(false);
-  const [calcInputs, setCalcInputs] = useState({
-    pot: '500000',
-    monthly: '10000',
-    months: '50',
-    liftAt: '15',
-    comm: '5000',
-  });
-  const [calcResult, setCalcResult] = useState<ChitCalculation | null>(null);
 
   // Modal states for Add, Lift, Close, Edit
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -55,7 +45,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
   const [liftDay, setLiftDay] = useState(String(now.getDate()).padStart(2, '0'));
   const [liftMonth, setLiftMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
   const [liftYear, setLiftYear] = useState(String(currentYear));
-  const [liftComm, setLiftComm] = useState('5000');
+  const [liftComm, setLiftComm] = useState('');
 
   // Close Form
   const [closeDay, setCloseDay] = useState(String(now.getDate()).padStart(2, '0'));
@@ -64,57 +54,6 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
 
   const toggleCard = (id: string) => {
     setOpenCards((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  // Run Chit Calculator (matches chitcalcrun from life-events.js)
-  const handleRunCalc = () => {
-    const pot = parseFloat(calcInputs.pot) || 0;
-    const monthly = parseFloat(calcInputs.monthly) || 0;
-    const months = parseInt(calcInputs.months) || 0;
-    const liftAt = parseInt(calcInputs.liftAt) || 0;
-    const comm = parseFloat(calcInputs.comm) || 0;
-
-    if (!pot || !monthly || !months) return;
-
-    const totalPaid = monthly * months;
-    const noLiftNet = pot - totalPaid;
-
-    let paidTillLift = 0;
-    let remaining = 0;
-    let received = 0;
-    let netLift = 0;
-
-    if (liftAt && liftAt <= months) {
-      paidTillLift = monthly * liftAt;
-      remaining = monthly * (months - liftAt);
-      received = pot - comm;
-      netLift = received - totalPaid;
-    }
-
-    let beMonth = 0;
-    for (let bm = 1; bm <= months; bm++) {
-      const r2 = pot - comm;
-      const net2 = r2 - monthly * months;
-      if (net2 >= 0) {
-        beMonth = bm;
-        break;
-      }
-    }
-
-    setCalcResult({
-      pot,
-      monthly,
-      months,
-      liftAt: liftAt || undefined,
-      comm: comm || undefined,
-      totalPaid,
-      noLiftNet,
-      paidTillLift: liftAt ? paidTillLift : undefined,
-      remaining: liftAt ? remaining : undefined,
-      received: liftAt ? received : undefined,
-      netLift: liftAt ? netLift : undefined,
-      beMonth: beMonth || undefined,
-    });
   };
 
   // Summary Metrics
@@ -215,194 +154,34 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
   return (
     <div className="flex flex-col w-full space-y-4 pb-6 animate-fadeIn">
       {/* Summary Header */}
-      <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-300/40 grid grid-cols-3 gap-2 text-center shadow-xs">
+      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-300/40 grid grid-cols-3 gap-2 text-center shadow-xs">
         <div>
-          <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">
+          <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">
             Monthly Outflow
           </span>
-          <span className="font-display font-extrabold text-base sm:text-lg text-amber-950">
+          <span className="font-display font-extrabold text-base sm:text-lg text-emerald-950">
             ₹{totalMonthlyOutflow.toLocaleString('en-IN')}
           </span>
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">
+          <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">
             Active Chits
           </span>
-          <span className="font-display font-extrabold text-base sm:text-lg text-amber-950">
+          <span className="font-display font-extrabold text-base sm:text-lg text-emerald-950">
             {activeChits.length}
           </span>
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">
+          <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">
             Lifted
           </span>
-          <span className="font-display font-extrabold text-base sm:text-lg text-amber-950">
+          <span className="font-display font-extrabold text-base sm:text-lg text-emerald-950">
             {liftedCount}
           </span>
         </div>
       </div>
 
-      {/* Chit Calculator Box (matches chit-calc-box) */}
-      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 overflow-hidden shadow-xs">
-        <div
-          onClick={() => setIsCalcOpen(!isCalcOpen)}
-          className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-surface-container-low transition-colors select-none"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-base">🧮</span>
-            <span className="font-display text-sm font-bold text-on-surface">
-              Chit Calculator (Planning & Profit)
-            </span>
-          </div>
-          <span
-            className={`material-symbols-outlined text-on-surface-variant transition-transform duration-200 text-[20px] ${
-              isCalcOpen ? 'rotate-180' : ''
-            }`}
-          >
-            keyboard_arrow_down
-          </span>
-        </div>
-
-        {isCalcOpen && (
-          <div className="p-4 pt-1 border-t border-outline-variant/20 space-y-3 bg-surface-container-low/40">
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="text-[11px] font-bold text-on-surface-variant block mb-1">
-                  Pot amount (₹)
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={calcInputs.pot}
-                  onChange={(e) => setCalcInputs({ ...calcInputs, pot: e.target.value })}
-                  placeholder="e.g. 500000"
-                  className="w-full bg-surface-container-lowest px-3 py-2 rounded-xl text-xs font-semibold border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-on-surface-variant block mb-1">
-                  Monthly (₹)
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={calcInputs.monthly}
-                  onChange={(e) => setCalcInputs({ ...calcInputs, monthly: e.target.value })}
-                  placeholder="e.g. 10000"
-                  className="w-full bg-surface-container-lowest px-3 py-2 rounded-xl text-xs font-semibold border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-on-surface-variant block mb-1">
-                  Total months
-                </label>
-                <input
-                  type="number"
-                  value={calcInputs.months}
-                  onChange={(e) => setCalcInputs({ ...calcInputs, months: e.target.value })}
-                  placeholder="e.g. 50"
-                  className="w-full bg-surface-container-lowest px-3 py-2 rounded-xl text-xs font-semibold border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-on-surface-variant block mb-1">
-                  Lift at month (optional)
-                </label>
-                <input
-                  type="number"
-                  value={calcInputs.liftAt}
-                  onChange={(e) => setCalcInputs({ ...calcInputs, liftAt: e.target.value })}
-                  placeholder="e.g. 15"
-                  className="w-full bg-surface-container-lowest px-3 py-2 rounded-xl text-xs font-semibold border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-bold text-on-surface-variant block mb-1">
-                Commission (₹) — optional
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={calcInputs.comm}
-                onChange={(e) => setCalcInputs({ ...calcInputs, comm: e.target.value })}
-                placeholder="e.g. 5000"
-                className="w-full bg-surface-container-lowest px-3 py-2 rounded-xl text-xs font-semibold border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            <button
-              onClick={handleRunCalc}
-              className="w-full py-2.5 rounded-xl bg-primary text-on-primary font-display text-xs font-bold shadow-xs hover:bg-primary-container active:scale-95 transition-all flex items-center justify-center gap-1.5"
-            >
-              <span>📈</span>
-              <span>Calculate Profit & Loss</span>
-            </button>
-
-            {/* Calculator Results (matches .chit-calc-res) */}
-            {calcResult && (
-              <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 space-y-2 animate-fadeIn text-xs">
-                <div className="font-display font-bold text-on-surface text-[12px] flex items-center gap-1">
-                  <span>📈</span> Without lifting:
-                </div>
-                <div className="flex justify-between text-on-surface-variant">
-                  <span>Total paid ({calcResult.months} months):</span>
-                  <span className="font-bold text-on-surface">₹{calcResult.totalPaid.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between text-on-surface-variant">
-                  <span>Pot received:</span>
-                  <span className="font-bold text-on-surface">₹{calcResult.pot.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between font-bold border-t border-outline-variant/20 pt-1.5">
-                  <span>Net {calcResult.noLiftNet >= 0 ? 'Profit' : 'Loss'}:</span>
-                  <span className={calcResult.noLiftNet >= 0 ? 'text-emerald-700' : 'text-rose-600'}>
-                    {calcResult.noLiftNet >= 0 ? '+' : '-'}₹{Math.abs(calcResult.noLiftNet).toLocaleString('en-IN')}
-                  </span>
-                </div>
-
-                {calcResult.liftAt && (
-                  <div className="pt-2 border-t border-outline-variant/20 space-y-1.5">
-                    <div className="font-display font-bold text-emerald-800 text-[12px]">
-                      ✅ If lifted at month {calcResult.liftAt}:
-                    </div>
-                    <div className="flex justify-between text-on-surface-variant">
-                      <span>Paid till lift:</span>
-                      <span className="font-bold">₹{(calcResult.paidTillLift || 0).toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between text-on-surface-variant">
-                      <span>Still to pay:</span>
-                      <span className="font-bold">₹{(calcResult.remaining || 0).toLocaleString('en-IN')}</span>
-                    </div>
-                    {calcResult.comm && (
-                      <div className="flex justify-between text-rose-600">
-                        <span>Commission:</span>
-                        <span>-₹{calcResult.comm.toLocaleString('en-IN')}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-bold border-t border-outline-variant/20 pt-1">
-                      <span>Net {calcResult.netLift && calcResult.netLift >= 0 ? 'Profit' : 'Loss'}:</span>
-                      <span className={calcResult.netLift && calcResult.netLift >= 0 ? 'text-emerald-700' : 'text-rose-600'}>
-                        {calcResult.netLift && calcResult.netLift >= 0 ? '+' : '-'}₹
-                        {Math.abs(calcResult.netLift || 0).toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {calcResult.beMonth && (
-                  <div className="pt-2 text-[11px] font-bold text-primary flex items-center gap-1 border-t border-outline-variant/20">
-                    <span>💡</span> Break-even if lifted at Month {calcResult.beMonth} or later
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      <ChitCalculator />
 
       {/* Chit Cards List */}
       <div className="space-y-3">
@@ -487,7 +266,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                       item.status === 'done'
                         ? 'bg-emerald-100 text-emerald-800'
                         : item.lifted
-                        ? 'bg-amber-200 text-amber-900'
+                        ? 'bg-emerald-200 text-emerald-900'
                         : 'bg-yellow-200 text-yellow-900'
                     }`}
                   >
@@ -534,7 +313,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                   <div className="space-y-1">
                     <div className="w-full h-2 rounded-full bg-yellow-200 overflow-hidden">
                       <div
-                        className="h-full bg-amber-600 transition-all duration-500 rounded-full"
+                        className="h-full bg-emerald-600 transition-all duration-500 rounded-full"
                         style={{ width: `${progressPct}%` }}
                       />
                     </div>
@@ -554,13 +333,13 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                       <div
                         onClick={() => {
                           setLiftModalChit(item);
-                          setLiftComm(String(item.commission || 5000));
+                          setLiftComm(item.commission === undefined ? '' : String(item.commission));
                         }}
-                        className="flex justify-between items-center cursor-pointer hover:text-amber-800 font-semibold"
+                        className="flex justify-between items-center cursor-pointer hover:text-emerald-800 font-semibold"
                         title="Click to edit lifted date or commission"
                       >
                         <span>Lifted on:</span>
-                        <span className="text-amber-900 font-bold underline flex items-center gap-1">
+                        <span className="text-emerald-900 font-bold underline flex items-center gap-1">
                           {formatDateStr(item.liftedDate)} ✎
                         </span>
                       </div>
@@ -631,9 +410,9 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                       <button
                         onClick={() => {
                           setLiftModalChit(item);
-                          setLiftComm('5000');
+                          setLiftComm('');
                         }}
-                        className="flex-1 py-1.5 px-3 rounded-xl bg-amber-600 text-white font-bold text-xs shadow-2xs hover:bg-amber-700 active:scale-95 transition-all"
+                        className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-2xs hover:bg-emerald-700 active:scale-95 transition-all"
                       >
                         ✅ Lift
                       </button>
@@ -688,7 +467,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
           resetForm();
           setIsAddModalOpen(true);
         }}
-        className="w-full py-3 rounded-2xl bg-primary text-on-primary font-display text-xs font-bold shadow-xs hover:bg-primary-container active:scale-95 transition-all flex items-center justify-center gap-1.5"
+        className="w-full py-3 rounded-2xl bg-emerald-700 text-white font-display text-xs font-bold shadow-xs hover:bg-emerald-800 active:scale-95 transition-all flex items-center justify-center gap-1.5"
       >
         <span className="material-symbols-outlined text-[18px]">add</span>
         <span>+ Add Chit Fund</span>
@@ -752,7 +531,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                     type="number"
                     value={formMonthly}
                     onChange={(e) => setFormMonthly(e.target.value)}
-                    placeholder="15000"
+                    placeholder="e.g. 15000"
                     className="w-full bg-surface-container-low px-3 py-2 rounded-xl border border-outline-variant/30"
                     required
                   />
@@ -763,7 +542,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                     type="number"
                     value={formPot}
                     onChange={(e) => setFormPot(e.target.value)}
-                    placeholder="450000"
+                    placeholder="e.g. 500000"
                     className="w-full bg-surface-container-low px-3 py-2 rounded-xl border border-outline-variant/30"
                     required
                   />
@@ -854,7 +633,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl bg-primary text-on-primary font-display font-bold text-xs shadow-xs hover:bg-primary-container transition-all"
+                className="w-full py-3 rounded-2xl bg-emerald-700 text-white font-display font-bold text-xs shadow-xs hover:bg-emerald-800 transition-all"
               >
                 {editingChit ? 'Update Chit' : 'Save Chit'}
               </button>
@@ -930,7 +709,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
                   type="number"
                   value={liftComm}
                   onChange={(e) => setLiftComm(e.target.value)}
-                  placeholder="5000"
+                  placeholder="e.g. 5000"
                   className="w-full bg-surface-container-low px-3 py-2 rounded-xl border border-outline-variant/30"
                 />
               </div>
@@ -944,7 +723,7 @@ export const ChitsManager: React.FC<ChitsManagerProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl bg-amber-600 text-white font-display font-bold text-xs shadow-xs hover:bg-amber-700 transition-all"
+                className="w-full py-3 rounded-2xl bg-emerald-600 text-white font-display font-bold text-xs shadow-xs hover:bg-emerald-700 transition-all"
               >
                 Confirm Lifted
               </button>

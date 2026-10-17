@@ -1,3 +1,4 @@
+import { PencilIcon } from './PencilIcon';
 import React, { useState, useEffect } from 'react';
 import { TodayTask } from '../types';
 
@@ -249,7 +250,7 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
           className="text-on-surface-variant hover:text-primary p-1.5 rounded-lg active:scale-90 transition-all"
           title="Edit intention"
         >
-          <span className="material-symbols-outlined text-[16px]">edit</span>
+          <PencilIcon size={16} />
         </button>
       </div>
 

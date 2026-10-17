@@ -52,6 +52,7 @@ body {
 }
 
 .app-scroll {
+  overflow-anchor: none;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
@@ -62,6 +63,7 @@ body {
   position: relative;
   z-index: 0;
   overflow-anchor: none;
+  transition-duration: 80ms !important;
 }
 
 .list-section-sticky.is-pinned {
@@ -70,6 +72,56 @@ body {
   z-index: 40;
   isolation: isolate;
   scroll-margin-top: var(--list-sticky-top, 55px);
+  min-height: 46px;
+  padding: 6px 10px !important;
+  border-radius: 14px;
+  box-shadow: 0 5px 16px rgb(15 23 42 / 10%);
+}
+
+.list-section-sticky.is-pinned > div:first-child {
+  min-width: 0;
+  gap: 8px;
+}
+
+.list-section-sticky.is-pinned > div:first-child > div:first-child {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  font-size: 16px;
+}
+
+.list-section-sticky.is-pinned > div:first-child > div:nth-child(2) {
+  min-width: 0;
+}
+
+.list-section-sticky.is-pinned > div:first-child > div:nth-child(2) > div:first-child,
+.list-section-sticky.is-pinned > div:first-child > div:nth-child(2) > span:first-child {
+  display: none;
+}
+
+.list-section-sticky.is-pinned h2 {
+  max-width: 58vw;
+  margin-top: 0;
+  font-size: 14px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-section-sticky.is-pinned > div:last-child > div {
+  width: 28px;
+  height: 28px;
+}
+
+.list-section-sticky.is-pinned > div:last-child > span:first-child {
+  padding: 3px 7px;
+  font-size: 10px;
+}
+
+.app-scroll header,
+.app-scroll header * {
+  transition-duration: 0ms !important;
 }
 
 .accordion-fold-content > :first-child {

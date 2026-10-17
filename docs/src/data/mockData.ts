@@ -130,7 +130,7 @@ export const INITIAL_GROCERIES: GroceryItem[] = [
   { id: 'gm-h-4', name: 'Pitamber', group: 'Household / personal', store: 'General Store', needed: false, completed: false, quantity: '200 g', lastBought: '12 Oct 2026' },
   { id: 'gm-h-5', name: 'Sabena', group: 'Household / personal', store: 'General Store', needed: false, completed: false, quantity: '1 kg', lastBought: '12 Oct 2026' },
 
-  // --- MASTER LIST (Fruit) ---
+  // --- WEEKLY FRUIT LIST ---
   { id: 'gm-f-1', name: 'Guava', group: 'Fruit', store: 'Local Mandi', needed: false, completed: false, quantity: '1 kg' },
   { id: 'gm-f-2', name: 'Dragon fruit', group: 'Fruit', store: 'Ratnadeep', needed: false, completed: false, quantity: '2 pcs' },
   { id: 'gm-f-3', name: 'Apple', group: 'Fruit', store: 'Ratnadeep', needed: false, completed: false, quantity: '1 kg', lastBought: '08 Oct 2026' },
