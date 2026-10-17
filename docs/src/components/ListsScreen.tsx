@@ -191,7 +191,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         const headerRect = header.getBoundingClientRect();
         const section = header.closest<HTMLElement>('[data-list-category]');
         const sectionBottom = section?.getBoundingClientRect().bottom ?? 0;
-        return headerRect.top <= stickyLine + 1 && sectionBottom > stickyLine + 48;
+        return headerRect.top <= stickyLine + 2 && sectionBottom > stickyLine + 8;
       }).at(-1);
       const nextId = currentHeader?.dataset.listSectionHeader ?? null;
       scroller.style.setProperty('--list-sticky-top', `${categoryOffset}px`);
@@ -287,8 +287,8 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
     }));
   };
 
-  const nonVegItems = groceryItems.filter((g) => g.group !== 'Vegetables' && g.isInMaster !== false);
-  const buyNowCount = nonVegItems.filter((g) => g.needed && !g.completed).length;
+  const shoppingMasterItems = groceryItems.filter((g) => g.group !== 'Vegetables' && g.group !== 'Fruit' && g.isInMaster !== false);
+  const buyNowCount = groceryItems.filter((g) => g.group !== 'Vegetables' && g.needed && !g.completed).length;
   const pendingVegCount = groceryItems.filter((g) => g.group === 'Vegetables' && !g.completed).length;
   const pendingFruitCount = groceryItems.filter((g) => g.group === 'Fruit' && !g.completed).length;
   const fruitItemCount = groceryItems.filter((g) => g.group === 'Fruit').length;
@@ -409,7 +409,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                       )}
                     </div>
                     <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
-                      Rice, dals, oils, household, pooja & dry fruits
+                      Staples, home essentials & pooja supplies
                     </p>
                   </div>
                 </div>
@@ -423,7 +423,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
 
               <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
                 <span className="text-slate-400 font-medium">
-                  {nonVegItems.length} items in master catalog
+                  {shoppingMasterItems.length} reusable items
                 </span>
                 <span className="text-amber-700 font-bold group-hover:underline">
                   Open shopping list ›
@@ -457,7 +457,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                       )}
                     </div>
                     <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
-                      Shop on {weekdayNames[produceSchedules.vegetables.marketDay]} · Weekly produce list
+                      Weekly mandi list · Shop {weekdayNames[produceSchedules.vegetables.marketDay]}
                     </p>
                   </div>
                 </div>
@@ -471,7 +471,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
 
               <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
                 <span className="text-slate-400 font-medium">
-                  Weekly mandi schedule & price tracker
+                  Set market day · Track quantities & prices
                 </span>
                 <span className="text-emerald-700 font-bold group-hover:underline">
                   Open mandi list ›
@@ -497,13 +497,13 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                         <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-bold">Add fruit list</span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">Shop on {weekdayNames[produceSchedules.fruits.marketDay]} · Weekly fruit list</p>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">Weekly fruit list · Shop {weekdayNames[produceSchedules.fruits.marketDay]}</p>
                   </div>
                 </div>
                 <span className="material-symbols-outlined ml-2 shrink-0 text-slate-400 group-hover:translate-x-0.5 group-hover:text-rose-600 transition-all text-[22px]">chevron_right</span>
               </div>
               <div className="mt-2.5 pt-2 border-t border-rose-100 flex items-center justify-between text-[11px]">
-                <span className="text-slate-400 font-medium">Weekly fruit reminder & purchase history</span>
+                <span className="text-slate-400 font-medium">Weekly restock · Purchase history</span>
                 <span className="text-rose-700 font-bold group-hover:underline">Open fruit list ›</span>
               </div>
             </div>          </div>

@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { GroceryItem, GroceryPurchase, ProduceCategory, ProduceSchedule, ProduceSchedules, Weekday } from '../types';
+
+const DEDICATED_PRODUCE_GROUPS = new Set(['fruit', 'fruits', 'vegetable', 'vegetables', 'veggie', 'veggies']);
+const isDedicatedProduceCategory = (category: string) => DEDICATED_PRODUCE_GROUPS.has(category.trim().toLocaleLowerCase());
 
 interface GroceryManagerProps {
   items: GroceryItem[];
@@ -50,6 +53,9 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
   const [isVegHistoryOpen, setIsVegHistoryOpen] = useState(false);
   const [isFruitListOpen, setIsFruitListOpen] = useState(false);
   const [isFruitHistoryOpen, setIsFruitHistoryOpen] = useState(false);
+  const [confirmingPurchaseItems, setConfirmingPurchaseItems] = useState<Set<string>>(() => new Set());
+  const [leavingPurchaseItems, setLeavingPurchaseItems] = useState<Set<string>>(() => new Set());
+  const purchaseCompletionTimers = useRef<Map<string, number>>(new Map());
   const [isVegScheduleOpen, setIsVegScheduleOpen] = useState(false);
   const [isFruitScheduleOpen, setIsFruitScheduleOpen] = useState(false);
   const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -90,7 +96,6 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
     'Staples / food': false,
     'Household / personal': false,
     'Pooja': false,
-    'Fruit': false,
     'Nuts, seeds and snacks': false,
   });
 
@@ -101,9 +106,33 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
     }));
   };
 
+  const markItemPurchased = (id: string, price?: string) => {
+    if (purchaseCompletionTimers.current.has(id)) return;
+    setConfirmingPurchaseItems((previous) => new Set(previous).add(id));
+    const confirmationTimer = window.setTimeout(() => {
+      setLeavingPurchaseItems((previous) => new Set(previous).add(id));
+      const leavingTimer = window.setTimeout(() => {
+        onToggleCompleted(id, price);
+        setConfirmingPurchaseItems((previous) => {
+          const next = new Set(previous);
+          next.delete(id);
+          return next;
+        });
+        setLeavingPurchaseItems((previous) => {
+          const next = new Set(previous);
+          next.delete(id);
+          return next;
+        });
+        purchaseCompletionTimers.current.delete(id);
+      }, 160);
+      purchaseCompletionTimers.current.set(id, leavingTimer);
+    }, 340);
+    purchaseCompletionTimers.current.set(id, confirmationTimer);
+  };
+
   // --- Category C Items ---
   const nonVegItems = items.filter((i) => i.group !== 'Vegetables');
-  const masterItems = nonVegItems.filter((i) => i.isInMaster !== false);
+  const masterItems = nonVegItems.filter((i) => i.isInMaster !== false && !isDedicatedProduceCategory(i.group));
   const buyNowList = nonVegItems.filter((i) => i.needed && !i.completed);
   const monthlyPurchases = purchases
     .reduce((months, purchase) => {
@@ -145,21 +174,20 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
     'Staples / food',
     'Household / personal',
     'Pooja',
-    'Fruit',
     'Nuts, seeds and snacks',
-    ...customCategories.filter((category) => !['Staples / food', 'Household / personal', 'Pooja', 'Fruit', 'Nuts, seeds and snacks'].some((builtIn) => builtIn.toLowerCase() === category.toLowerCase())),
+    ...customCategories.filter((category) => !isDedicatedProduceCategory(category) && !['Staples / food', 'Household / personal', 'Pooja', 'Nuts, seeds and snacks'].some((builtIn) => builtIn.toLowerCase() === category.toLowerCase())),
   ];
 
   const handleAddMasterItem = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItemName.trim()) return;
+    if (!newItemName.trim() || isDedicatedProduceCategory(newItemGroup)) return;
     onAddItem(newItemName.trim(), newItemGroup, newItemStore, false, '', '', true);
     setNewItemName('');
   };
 
   const handleQuickAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quickName.trim() || quickAddStoreMode || quickAddCategoryMode) return;
+    if (!quickName.trim() || quickAddStoreMode || quickAddCategoryMode || (quickAlsoMaster && isDedicatedProduceCategory(quickMasterGroup))) return;
     const name = quickName.trim();
     const existingMaster = quickAlsoMaster
       ? masterItems.find((item) => item.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase())
@@ -184,7 +212,7 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
 
   const handleQuickAddCategory = () => {
     const category = quickCategoryDraft.trim();
-    if (!category) return;
+    if (!category || isDedicatedProduceCategory(category)) return;
     const existing = coreMasterGroups.find((group) => group.toLowerCase() === category.toLowerCase());
     const selectedCategory = existing || category;
     if (!existing) onAddCategory(category);
@@ -223,7 +251,7 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
 
   const handleSaveMasterCategory = () => {
     const category = masterCategoryDraft.trim();
-    if (!category) return;
+    if (!category || isDedicatedProduceCategory(category)) return;
     const existingCategory = coreMasterGroups.find((group) => group.toLowerCase() === category.toLowerCase());
     const selectedCategory = existingCategory || category;
     if (!existingCategory) onAddCategory(category);
@@ -243,7 +271,7 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
   const handleAddFruitItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFruitName.trim()) return;
-    onAddItem(newFruitName.trim(), 'Fruit', 'Local Mandi', true, '1 kg', '');
+    onAddItem(newFruitName.trim(), 'Fruit', 'Local Mandi', true, '1 kg', '', false);
     setNewFruitName('');
   };
 
@@ -297,7 +325,7 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
       </div>
 
       {/* =========================================================================
-          CATEGORY C: GROCERY & SHOPPING (Staples, food, household, pooja, fruit)
+          CATEGORY C: GROCERY & SHOPPING (Staples, food, household, pooja, and custom master categories)
          ========================================================================= */}
       {activeCategory === 'C' && (
         <div className="space-y-4">
@@ -345,10 +373,13 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
                   {coreMasterGroups.map((group) => <option key={group} value={group}>{group}</option>)}
                   <option value="__add_new_category__">+ Add new category…</option>
                 </select>
-                {quickAddCategoryMode && <div className="flex gap-2">
-                  <input autoFocus value={quickCategoryDraft} onChange={(e) => setQuickCategoryDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleQuickAddCategory(); } }} placeholder="New category name" maxLength={40} className="flex-1 min-w-0 bg-white px-3 py-2 rounded-xl text-xs border border-amber-200" />
-                  <button type="button" onClick={handleQuickAddCategory} disabled={!quickCategoryDraft.trim()} className="px-3 py-2 rounded-xl bg-amber-700 text-white text-xs font-bold disabled:opacity-50">Save category</button>
-                  <button type="button" onClick={() => { setQuickAddCategoryMode(false); setQuickCategoryDraft(''); }} className="px-2 py-2 rounded-xl text-amber-900 text-xs">Cancel</button>
+                {quickAddCategoryMode && <div className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <input autoFocus value={quickCategoryDraft} onChange={(e) => setQuickCategoryDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleQuickAddCategory(); } }} placeholder="New category name" maxLength={40} className="flex-1 min-w-0 bg-white px-3 py-2 rounded-xl text-xs border border-amber-200" />
+                    <button type="button" onClick={handleQuickAddCategory} disabled={!quickCategoryDraft.trim() || isDedicatedProduceCategory(quickCategoryDraft)} className="px-3 py-2 rounded-xl bg-amber-700 text-white text-xs font-bold disabled:opacity-50">Save category</button>
+                    <button type="button" onClick={() => { setQuickAddCategoryMode(false); setQuickCategoryDraft(''); }} className="px-2 py-2 rounded-xl text-amber-900 text-xs">Cancel</button>
+                  </div>
+                  <p className="text-[10px] text-amber-800">Fruits and vegetables have their own weekly lists.</p>
                 </div>}
               </>}
               {quickAddStoreMode && <div className="flex gap-2">
@@ -360,27 +391,28 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
             </form>
             {buyNowList.length ? (
               <div className="space-y-1.5">
-                <div className="flex items-center px-2 py-1 text-[10px] font-extrabold text-amber-900/60 uppercase tracking-wider">
-                  <span className="w-7" />
+                <div className="flex items-center gap-1 px-2 py-1 text-[10px] font-extrabold text-amber-900/60 uppercase tracking-wider">
+                  <span className="w-6 sm:w-7" />
                   <span className="flex-1">Item</span>
-                  <span className="w-16 text-center">Qty</span>
-                  <span className="w-14 text-center">₹ Price</span>
-                  <span className="w-7" />
+                  <span className="ml-auto sm:hidden">Qty · ₹ Price</span>
+                  <span className="hidden w-16 text-center sm:block">Qty</span>
+                  <span className="hidden w-14 text-center sm:block">₹ Price</span>
+                  <span className="hidden w-7 sm:block" />
                 </div>
                 {buyNowList.map((item) => (
-                  <div key={item.id} className="grid grid-cols-[24px_minmax(0,1fr)_56px_52px_24px] sm:flex sm:items-center gap-1.5 sm:gap-2 p-2.5 rounded-xl bg-white border border-amber-200">
-                    <button onClick={() => onToggleCompleted(item.id, item.price)} className="w-6 h-6 rounded-lg border-2 border-amber-300 hover:border-emerald-500 hover:bg-emerald-50 flex items-center justify-center shrink-0" title="Mark as bought">
-                      <span className="material-symbols-outlined text-[15px] text-emerald-700">check</span>
+                  <div key={item.id} className={`grid grid-cols-[24px_minmax(0,1fr)_22px] sm:flex sm:items-center gap-x-2 gap-y-1 p-2 sm:p-2.5 rounded-xl border transition-all duration-150 ${leavingPurchaseItems.has(item.id) ? 'opacity-0 -translate-y-2 scale-[0.98]' : ''} ${confirmingPurchaseItems.has(item.id) ? 'bg-emerald-50 border-emerald-300 shadow-sm shadow-emerald-100' : 'bg-white border-amber-200'}`}>
+                    <button onClick={() => markItemPurchased(item.id, item.price)} disabled={confirmingPurchaseItems.has(item.id)} aria-label={confirmingPurchaseItems.has(item.id) ? `${item.name} marked done` : `Mark ${item.name} bought`} className={`row-span-2 self-center w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all duration-150 sm:row-span-1 ${confirmingPurchaseItems.has(item.id) ? 'border-emerald-600 bg-emerald-500 text-white scale-105 shadow-sm shadow-emerald-300' : 'border-amber-300 bg-white text-emerald-700 hover:border-emerald-500 hover:bg-emerald-50'}`} title={confirmingPurchaseItems.has(item.id) ? 'Done — saving to purchase history' : 'Mark as bought'}>
+                      <span className="material-symbols-outlined text-[15px]">check</span>
                     </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-xs text-slate-800 whitespace-normal break-words leading-snug">{item.name}</div>
+                    <div className="col-start-2 row-start-1 min-w-0 sm:col-auto sm:row-auto sm:flex-1">
+                      <div className="flex min-w-0 items-start gap-1 font-semibold text-xs text-slate-800 whitespace-normal break-words leading-snug"><span className="min-w-0">{item.name}</span>{confirmingPurchaseItems.has(item.id) && <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold leading-none text-emerald-800">Done!</span>}</div>
                       <div className="flex min-w-0 items-center gap-1 text-amber-800 mt-0.5">
                         <span className="material-symbols-outlined text-[13px] leading-none" aria-hidden="true">storefront</span>
                         <span className="text-[9px] font-semibold shrink-0">Bought at</span>
                         <select value={addingPurchaseStoreForItemId === item.id ? '__add_new_store__' : item.buyNowStore || item.store || ''} onChange={(e) => {
                           if (e.target.value === '__add_new_store__') setAddingPurchaseStoreForItemId(item.id);
                           else onUpdateItem(item.id, { buyNowStore: e.target.value });
-                        }} aria-label={`Bought at store for ${item.name}`} className="min-w-0 max-w-full bg-transparent text-[10px] font-bold focus:outline-none">
+                        }} aria-label={`Bought at store for ${item.name}`} className="min-w-0 w-0 flex-1 bg-transparent text-[10px] font-bold focus:outline-none">
                           {!item.buyNowStore && !item.store && <option value="">Choose store</option>}
                           {item.store && !stores.includes(item.store) && <option value={item.store}>{item.store}</option>}
                           {stores.map((store) => <option key={store} value={store}>{store}</option>)}
@@ -393,9 +425,11 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
                         <button type="button" onClick={() => { setAddingPurchaseStoreForItemId(null); setPurchaseStoreDraft(''); }} className="px-1 py-1 text-[10px] text-slate-500">×</button>
                       </div>}
                     </div>
-                    <input value={item.quantity || ''} onChange={(e) => onUpdateItem(item.id, { quantity: e.target.value })} placeholder="qty" maxLength={20} className="w-16 text-center text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg py-1 px-1" aria-label={`Quantity for ${item.name}`} />
-                    <input value={item.price || ''} onChange={(e) => onUpdateItem(item.id, { price: e.target.value })} placeholder="₹" maxLength={8} className="w-14 text-center text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg py-1 px-1" aria-label={`Price for ${item.name}`} />
-                    <button onClick={() => item.isInMaster === false ? onDeleteItem(item.id) : onToggleNeeded(item.id)} className="w-7 h-7 rounded-lg text-amber-700 hover:bg-rose-50 hover:text-rose-600" title={item.isInMaster === false ? 'Remove one-time item' : 'Remove from Buy now'}>×</button>
+                    <div className="col-start-2 row-start-2 flex justify-end gap-1.5 sm:contents">
+                      <input value={item.quantity || ''} onChange={(e) => onUpdateItem(item.id, { quantity: e.target.value })} placeholder="qty" maxLength={20} className="w-[56px] min-w-0 text-center text-[11px] sm:w-16 sm:text-xs font-bold bg-amber-50 border border-amber-200 rounded-lg py-0.5 sm:py-1 px-1" aria-label={`Quantity for ${item.name}`} />
+                      <input value={item.price || ''} onChange={(e) => onUpdateItem(item.id, { price: e.target.value })} placeholder="₹" maxLength={8} className="w-12 min-w-0 text-center text-[11px] sm:w-14 sm:text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg py-0.5 sm:py-1 px-1" aria-label={`Price for ${item.name}`} />
+                    </div>
+                    <button onClick={() => item.isInMaster === false ? onDeleteItem(item.id) : onToggleNeeded(item.id)} className="col-start-3 row-start-1 w-[22px] h-7 rounded-lg text-amber-700 hover:bg-rose-50 hover:text-rose-600 sm:col-auto sm:row-auto sm:w-7" title={item.isInMaster === false ? 'Remove one-time item' : 'Remove from Buy now'}>×</button>
                   </div>
                 ))}
               </div>
@@ -492,18 +526,21 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
                   <option value="__add_new_store__">+ Add new store…</option>
                 </select>
               </div>
-              {addingMasterCategory && <div className="flex gap-2">
-                <input
-                  autoFocus
-                  value={masterCategoryDraft}
-                  onChange={(e) => setMasterCategoryDraft(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveMasterCategory(); } }}
-                  placeholder="New category name"
-                  maxLength={40}
-                  className="min-w-0 flex-1 rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs"
-                />
-                <button type="button" onClick={handleSaveMasterCategory} disabled={!masterCategoryDraft.trim()} className="rounded-xl bg-violet-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Save</button>
-                <button type="button" onClick={() => { setAddingMasterCategory(false); setMasterCategoryDraft(''); }} className="rounded-xl px-2 py-2 text-xs text-slate-500">Cancel</button>
+              {addingMasterCategory && <div className="space-y-1.5">
+                <div className="flex gap-2">
+                  <input
+                    autoFocus
+                    value={masterCategoryDraft}
+                    onChange={(e) => setMasterCategoryDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveMasterCategory(); } }}
+                    placeholder="New category name"
+                    maxLength={40}
+                    className="min-w-0 flex-1 rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs"
+                  />
+                  <button type="button" onClick={handleSaveMasterCategory} disabled={!masterCategoryDraft.trim() || isDedicatedProduceCategory(masterCategoryDraft)} className="rounded-xl bg-violet-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Save</button>
+                  <button type="button" onClick={() => { setAddingMasterCategory(false); setMasterCategoryDraft(''); }} className="rounded-xl px-2 py-2 text-xs text-slate-500">Cancel</button>
+                </div>
+                <p className="text-[10px] text-violet-700">Fruits and vegetables have their own weekly lists.</p>
               </div>}
               {addingMasterStore && <div className="flex gap-2">
                 <input
@@ -624,9 +661,9 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
             {isFruitListOpen && <>
               {pendingFruit.length > 0 ? <div className="space-y-1.5">
                 <div className="flex items-center px-2 py-1 text-[10px] font-extrabold text-[#8c6425]/80 uppercase tracking-wider"><span className="w-6" /><span className="flex-1">Fruit</span><span className="w-16 text-center">Qty</span><span className="w-14 text-center">₹ Price</span><span className="w-7" /></div>
-                {pendingFruit.map((fruit) => <div key={fruit.id} className="flex items-center gap-2 rounded-xl border border-[#f2dfb5] bg-white/85 p-2.5 transition-colors hover:bg-white">
-                  <button type="button" onClick={() => onToggleCompleted(fruit.id, fruit.price)} aria-label={`Mark ${fruit.name} bought`} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#d6a94d] text-[#9a6a1f] transition hover:bg-[#d19332] hover:text-white"><span className="material-symbols-outlined text-[15px]">check</span></button>
-                  <div className="min-w-0 flex-1"><div className="break-words text-xs font-semibold text-slate-800">{fruit.name}</div>{fruit.lastBought && <div className="text-[10px] text-slate-400">Last bought {fruit.lastBought}</div>}</div>
+                {pendingFruit.map((fruit) => <div key={fruit.id} className={`flex items-center gap-2 rounded-xl border p-2.5 transition-all duration-150 ${leavingPurchaseItems.has(fruit.id) ? 'opacity-0 -translate-y-2 scale-[0.98]' : ''} ${confirmingPurchaseItems.has(fruit.id) ? 'bg-emerald-50 border-emerald-300 shadow-sm shadow-emerald-100' : 'border-[#f2dfb5] bg-white/85 hover:bg-white'}`}>
+                  <button type="button" onClick={() => markItemPurchased(fruit.id, fruit.price)} disabled={confirmingPurchaseItems.has(fruit.id)} aria-label={confirmingPurchaseItems.has(fruit.id) ? `${fruit.name} marked done` : `Mark ${fruit.name} bought`} className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150 ${confirmingPurchaseItems.has(fruit.id) ? 'border-emerald-600 bg-emerald-500 text-white scale-105 shadow-sm shadow-emerald-300' : 'border-[#d6a94d] text-[#9a6a1f] hover:bg-[#d19332] hover:text-white'}`}><span className="material-symbols-outlined text-[15px]">check</span></button>
+                  <div className="min-w-0 flex-1"><div className="break-words text-xs font-semibold text-slate-800">{fruit.name}{confirmingPurchaseItems.has(fruit.id) && <span className="ml-1 inline-block rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold leading-none text-emerald-800">Done!</span>}</div>{fruit.lastBought && <div className="text-[10px] text-slate-400">Last bought {fruit.lastBought}</div>}</div>
                   <input type="text" value={fruit.quantity || ''} onChange={(e) => onUpdateItem(fruit.id, { quantity: e.target.value })} placeholder="qty" maxLength={10} aria-label={`Quantity for ${fruit.name}`} className="w-16 shrink-0 rounded-lg border border-[#f0d28c] bg-white px-1 py-1 text-center text-xs font-bold text-slate-700 focus:outline-none focus:border-[#c28d35]" />
                   <input type="text" value={fruit.price || ''} onChange={(e) => onUpdateItem(fruit.id, { price: e.target.value })} placeholder="₹" maxLength={8} aria-label={`Price for ${fruit.name}`} className="w-14 shrink-0 rounded-lg border border-[#f0d28c] bg-white px-1 py-1 text-center text-xs font-bold text-[#8c6425] focus:outline-none focus:border-[#c28d35]" />
                   <button type="button" onClick={() => onDeleteItem(fruit.id)} aria-label={`Remove ${fruit.name}`} title="Remove fruit" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-50 hover:text-rose-600"><span className="material-symbols-outlined text-[17px]">delete</span></button>
@@ -715,9 +752,9 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
             {isVegListOpen && <>
               {pendingVeg.length > 0 ? <div className="space-y-1.5">
                 <div className="flex items-center px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[#587344]/70"><span className="w-6" /><span className="flex-1">Vegetable</span><span className="w-16 text-center">Qty</span><span className="w-14 text-center">₹ Price</span><span className="w-7" /></div>
-                {pendingVeg.map((veg) => <div key={veg.id} className="flex items-center gap-2 rounded-xl border border-[#dce8d2] bg-white/80 p-2.5 transition-colors hover:bg-white">
-                  <button type="button" onClick={() => onToggleCompleted(veg.id, veg.price)} aria-label={'Mark ' + veg.name + ' bought'} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#9bb77b] text-[#587344] transition-colors hover:bg-[#658347] hover:text-white"><span className="material-symbols-outlined text-[15px]">check</span></button>
-                  <div className="min-w-0 flex-1"><div className="break-words text-xs font-semibold text-slate-800">{veg.name}</div>{veg.lastBought && <div className="text-[10px] text-slate-400">Last bought {veg.lastBought}</div>}</div>
+                {pendingVeg.map((veg) => <div key={veg.id} className={`flex items-center gap-2 rounded-xl border p-2.5 transition-all duration-150 ${leavingPurchaseItems.has(veg.id) ? 'opacity-0 -translate-y-2 scale-[0.98]' : ''} ${confirmingPurchaseItems.has(veg.id) ? 'bg-emerald-50 border-emerald-300 shadow-sm shadow-emerald-100' : 'border-[#dce8d2] bg-white/80 hover:bg-white'}`}>
+                  <button type="button" onClick={() => markItemPurchased(veg.id, veg.price)} disabled={confirmingPurchaseItems.has(veg.id)} aria-label={confirmingPurchaseItems.has(veg.id) ? `${veg.name} marked done` : `Mark ${veg.name} bought`} className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150 ${confirmingPurchaseItems.has(veg.id) ? 'border-emerald-600 bg-emerald-500 text-white scale-105 shadow-sm shadow-emerald-300' : 'border-[#9bb77b] text-[#587344] hover:bg-[#658347] hover:text-white'}`}><span className="material-symbols-outlined text-[15px]">check</span></button>
+                  <div className="min-w-0 flex-1"><div className="break-words text-xs font-semibold text-slate-800">{veg.name}{confirmingPurchaseItems.has(veg.id) && <span className="ml-1 inline-block rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold leading-none text-emerald-800">Done!</span>}</div>{veg.lastBought && <div className="text-[10px] text-slate-400">Last bought {veg.lastBought}</div>}</div>
                   <input type="text" value={veg.quantity || ''} onChange={(e) => onUpdateItem(veg.id, { quantity: e.target.value })} placeholder="qty" maxLength={10} aria-label={'Quantity for ' + veg.name} className="w-16 shrink-0 rounded-lg border border-[#c9ddb0] bg-white px-1 py-1 text-center text-xs font-bold text-slate-700 focus:outline-none focus:border-[#8ba66b]" />
                   <input type="text" value={veg.price || ''} onChange={(e) => onUpdateItem(veg.id, { price: e.target.value })} placeholder="₹" maxLength={8} aria-label={'Price for ' + veg.name} className="w-14 shrink-0 rounded-lg border border-[#c9ddb0] bg-white px-1 py-1 text-center text-xs font-bold text-[#4c6c38] focus:outline-none focus:border-[#8ba66b]" />
                   <button type="button" onClick={() => onDeleteItem(veg.id)} aria-label={'Delete ' + veg.name} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-50 hover:text-rose-600"><span className="material-symbols-outlined text-[17px]">delete</span></button>

@@ -1108,7 +1108,7 @@ export default function App() {
           ref={scrollContainerRef}
           onScroll={(event) => {
             const scrollTop = event.currentTarget.scrollTop;
-            setIsHeaderCompact((currentlyCompact) => currentlyCompact ? scrollTop > 18 : scrollTop > 48);
+            setIsHeaderCompact((currentlyCompact) => currentlyCompact ? scrollTop > 8 : scrollTop > 24);
           }}
           className="app-scroll flex-1 overflow-y-auto overscroll-y-contain w-full min-h-0 flex flex-col"
         >
