@@ -1,3 +1,4 @@
+import { PencilIcon } from './PencilIcon';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -292,7 +293,6 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
   const pendingVegCount = groceryItems.filter((g) => g.group === 'Vegetables' && !g.completed).length;
   const pendingFruitCount = groceryItems.filter((g) => g.group === 'Fruit' && !g.completed).length;
   const fruitItemCount = groceryItems.filter((g) => g.group === 'Fruit').length;
-  const totalGroceryCount = groceryItems.filter((item) => item.group === 'Vegetables' || item.group === 'Fruit' || item.isInMaster !== false).length;
   const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   const activeChits = chits.filter((c) => c.status !== 'done');
@@ -357,9 +357,8 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                 <span className={`font-extrabold uppercase tracking-tight transition-all duration-160 ${pinnedListCategory === 'groceries' ? 'text-[9px] text-amber-700' : 'text-[11px] text-white/80'}`}>
                   {sectionLabels.groceries.subtitle}
                 </span>
-                <span className={`w-1 h-1 rounded-full ${pinnedListCategory === 'groceries' ? 'bg-amber-400' : 'bg-white/60'}`} />
                 <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${pinnedListCategory === 'groceries' ? 'bg-amber-100 text-amber-800' : 'bg-white/15 text-white'}`}>
-                  {totalGroceryCount} items
+                  Eat well
                 </span>
               </div>
               <h2 className={`font-bold font-display tracking-tight leading-none mt-0.5 transition-all duration-160 ${pinnedListCategory === 'groceries' ? 'text-base text-amber-950' : 'text-xl text-white'}`}>
@@ -552,33 +551,33 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
         <AccordionContent open={!collapsedSections.lifeos} className="ml-2 border-l-2 border-emerald-200 pl-3">
           <p className="mb-3 pl-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-emerald-700/80">Subcategories</p>
           <div className="grid grid-cols-1 gap-3.5">
-            {/* Card 1: Rich Golden Saffron Chit Fund Theme */}
+            {/* Card 1: Savings Green Chit Fund Theme */}
             <div
               onClick={onOpenChits}
-              className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-yellow-300/70 shadow-[0_4px_20px_-4px_rgba(234,179,8,0.14)] active:scale-[0.99] flex items-center justify-between"
+              className="group relative rounded-2xl p-4 transition-all duration-200 cursor-pointer overflow-hidden border border-emerald-300/70 shadow-[0_4px_20px_-4px_rgba(16,120,80,0.12)] active:scale-[0.99] flex items-center justify-between"
               style={{
-                background: 'linear-gradient(135deg, #fffbeb 0%, #fffdf7 55%, #ffffff 100%)',
+                background: 'linear-gradient(135deg, #ecfdf5 0%, #f4fbf7 55%, #ffffff 100%)',
               }}
             >
               <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                <div className="w-12 h-12 rounded-2xl bg-yellow-500/20 border border-yellow-400/50 flex items-center justify-center text-2xl shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-2xl shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200">
                   💰
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-display text-base font-bold text-yellow-950">
+                    <h3 className="font-display text-base font-bold text-emerald-950">
                       Chits & Savings
                     </h3>
-                    <span className="px-2 py-0.5 rounded-full bg-yellow-200/80 text-yellow-900 text-[11px] font-bold">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 text-[11px] font-bold">
                       {activeChits.length} active
                     </span>
-                    <span className="px-2 py-0.5 rounded-full bg-white/80 border border-yellow-200 text-yellow-900 text-[11px] font-medium">
+                    <span className="px-2 py-0.5 rounded-full bg-white/80 border border-emerald-200 text-emerald-900 text-[11px] font-medium">
                       {chitNames || 'No active chits'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className="inline-flex items-center gap-1 text-yellow-900 text-xs font-bold bg-white/90 border border-yellow-300/60 px-2.5 py-0.5 rounded-lg shadow-2xs">
-                      <span className="material-symbols-outlined text-[13px] text-yellow-700">event</span>
+                    <span className="inline-flex items-center gap-1 text-emerald-900 text-xs font-bold bg-white/90 border border-emerald-300/60 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                      <span className="material-symbols-outlined text-[13px] text-emerald-700">event</span>
                       {chitDueLabel}
                     </span>
                   </div>
@@ -591,12 +590,12 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                     e.stopPropagation();
                     onOpenChits();
                   }}
-                  className="w-9 h-9 rounded-full bg-yellow-500 hover:bg-yellow-600 text-yellow-950 font-bold shadow-sm flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                  className="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-600 text-emerald-950 font-bold shadow-sm flex items-center justify-center transition-all hover:scale-105 active:scale-95"
                   title="Open Chits Manager & Calculator"
                 >
                   <span className="material-symbols-outlined text-[18px]">payments</span>
                 </button>
-                <span className="material-symbols-outlined text-yellow-600 text-[22px] group-hover:text-yellow-900 transition-colors">
+                <span className="material-symbols-outlined text-emerald-600 text-[22px] group-hover:text-emerald-900 transition-colors">
                   chevron_right
                 </span>
               </div>
@@ -1047,7 +1046,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
                       onClick={() => startEdit(key)}
                       className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition-colors"
                     >
-                      <span className="material-symbols-outlined text-[16px]">edit</span>
+                      <PencilIcon size={16} />
                     </button>
                   )}
                 </div>

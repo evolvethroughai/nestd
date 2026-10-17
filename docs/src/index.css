@@ -52,6 +52,7 @@ body {
 }
 
 .app-scroll {
+  overflow-anchor: none;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
@@ -120,7 +121,7 @@ body {
 
 .app-scroll header,
 .app-scroll header * {
-  transition-duration: 70ms !important;
+  transition-duration: 0ms !important;
 }
 
 .accordion-fold-content > :first-child {
