@@ -24,4 +24,9 @@ if git diff --cached --quiet; then
 else
   git commit -m "${1:-Save changes}"
 fi
+# Merge remote commits before pushing; stop if Git reports a conflict.
+if ! git pull --no-rebase --no-edit origin studio; then
+  printf "Sync failed. Resolve any Git conflicts in the active checkout, then rerun this script.\n" >&2
+  exit 1
+fi
 git push origin HEAD:studio

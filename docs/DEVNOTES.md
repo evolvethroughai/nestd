@@ -357,6 +357,19 @@ Development has used **Amazon Q Developer** and **ChatGPT / Codex** inside VS Co
 
 # Daily Session Logs
 
+## 23 October 2026 - Repository move and mobile login diagnosis
+
+- Read the full project history in these notes: v1 debugging and date/grocery work; React migration; Firebase auth and user-scoped state/profile sync; account isolation; custom Lists, header and scrolling work; groceries/master lists/stores; weekly fruit and vegetable schedules/history; and the 17 October chit calculators, tracking ledger, CSV and help redesign.
+- Current local source is `nestd/docs/src`, relative to the workspace; older `GStudio/project_clean` paths above are historical. Git origin is `https://github.com/evolvethroughai/nestd.git`.
+- Confirmed the live app at `https://evolvethroughai.github.io/nestd/` returns HTTP 200. The `github.com` URL is the source repository, not the running app.
+- Confirmed the Firebase public project configuration still authorizes `learntogrow-in.github.io`, localhost and the project's Firebase domains, but NOT `evolvethroughai.github.io`. The new Pages hostname therefore cannot complete Google sign-in. This is a hosting hostname change, not just a repository path change.
+- Required console fix: project `nestd---get-sortd` > Authentication > Settings > Authorized domains > Add domain > `evolvethroughai.github.io` (hostname only, no HTTPS or `/nestd/`). Retain the old hostname while old installations/links are still used. No Firebase admin connection is available in this session, so this console change has not been made.
+- Relative Vite base and PWA start/scope paths already tolerate a repository path rename. Existing installed shortcuts can still reference the old URL; first test the new URL directly in Chrome/Safari.
+- Kept popup auth for GitHub Pages. A blind mobile redirect fallback can fail with third-party storage restrictions; consult https://firebase.google.com/docs/auth/web/redirect-best-practices before changing hosting/auth flow.
+- Added persistent inline login errors in the account modal, disabled duplicate sign-in attempts, and provided actionable Firebase error codes/messages. Added Firestore profile/state listener and write error reporting; a failed state read keeps the cloud-write gate closed.
+- These local changes do not update the Firebase domain allowlist and do not prove mobile sign-in works. Retest on the phone after the console change. Firestore rules and authenticated data sync still require verification if errors remain.
+- Validation: `npm.cmd run build:docs` passed (existing large-chunk warning remains). TypeScript check found existing ChitCalculator.tsx errors (mode narrowing and a mixed string/record input value); none reported in the changed auth files. Local changes and regenerated output have not been committed, pushed or deployed.
+
 ---
 
 ## 📅 Session — 13 Oct 2026
@@ -596,3 +609,8 @@ Development has used **Amazon Q Developer** and **ChatGPT / Codex** inside VS Co
 - Existing Quick Tasks categories: Errands & Outings for tailor visits/clothes pickup; Home Setup for plumber/house maintenance; Family & Personal for family coordination. Tasks currently have title/completion only; dates, assignees and reminders remain a proposed feature, not implemented behavior.
 - Physical mobile smoothness and the visual separator require user review; build/type-check results are reported separately.
 - Validation: production build passed with the existing large-bundle warning. TypeScript check remains blocked by existing ChitCalculator.tsx errors; no errors were reported in the changed files. Changes are local, uncommitted and not deployed.
+
+
+### Repository synchronization follow-up - 23 October 2026
+- Active checkout committed UI fixes as 8223d12 but push was rejected because origin/studio contained login commit 0031ad6. Merged both histories and rebuilt generated Pages files to resolve asset rename/index conflicts.
+- Updated both save_git.sh copies to merge origin/studio after committing and before pushing, and to stop with an explanation if synchronization fails. No force push is used.
