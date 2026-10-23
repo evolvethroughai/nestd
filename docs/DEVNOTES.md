@@ -584,3 +584,15 @@ Development has used **Amazon Q Developer** and **ChatGPT / Codex** inside VS Co
 - Calculator test cases were expanded during the earlier work, but the latest iterative changes were not retested. A production build does not establish financial correctness or visual verification on a physical phone. Review/update the test expectations before relying on this calculator for actual financial decisions.
 - Local Vite server currently available at http://localhost:3006/ (LAN http://192.168.29.7:3006/). Earlier servers occupied ports 3000-3005.
 - Follow-up: exercise saver/borrower endpoints, zero/fractional commission, reversed/blank ranges, receipt overrides, incomplete actual ledgers, rounding and CSV consistency. Refresh help text if calculator assumptions change.
+
+
+## 23 October 2026 - Lists scrolling, navigation separator and produce isolation
+
+- Work performed in the active C:/Users/evolvethroughai checkout. This copy started at 06255fc; the separate login diagnostics commit 0031ad6 has not been pulled into this checkout.
+- Lists category headers now use the Nestd header timing: compact 200 ms, expand 120 ms. Removed staggered accordion delays and reduced the 320 ms fold to the same 200/120 ms timings.
+- Sticky selection measures natural section positions instead of already-pinned header positions, with a 12 px release threshold. Layout reads are batched before writes, nodes are cached, React state updates only on category changes, and ResizeObserver refreshes positions when headers/accordions resize.
+- Fixed Staples Buy now accidentally including Fruit: exclude all dedicated produce groups. Corrected the Lists Staples pending count to exclude Fruit too. Existing produce records stay in their own weekly lists.
+- Changed the bottom navigation separator from a tinted border/indigo shadow to neutral slate after the user identified the blue line above Today/Lists/Sorti.
+- Existing Quick Tasks categories: Errands & Outings for tailor visits/clothes pickup; Home Setup for plumber/house maintenance; Family & Personal for family coordination. Tasks currently have title/completion only; dates, assignees and reminders remain a proposed feature, not implemented behavior.
+- Physical mobile smoothness and the visual separator require user review; build/type-check results are reported separately.
+- Validation: production build passed with the existing large-bundle warning. TypeScript check remains blocked by existing ChitCalculator.tsx errors; no errors were reported in the changed files. Changes are local, uncommitted and not deployed.

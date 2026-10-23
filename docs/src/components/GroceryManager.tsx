@@ -132,7 +132,7 @@ export const GroceryManager: React.FC<GroceryManagerProps> = ({
   };
 
   // --- Category C Items ---
-  const nonVegItems = items.filter((i) => i.group !== 'Vegetables');
+  const nonVegItems = items.filter((i) => !isDedicatedProduceCategory(i.group));
   const masterItems = nonVegItems.filter((i) => i.isInMaster !== false && !isDedicatedProduceCategory(i.group));
   const buyNowList = nonVegItems.filter((i) => i.needed && !i.completed);
   const monthlyPurchases = purchases

@@ -61,7 +61,7 @@ const AccordionContent: React.FC<{ open: boolean; className: string; children: R
   <div
     aria-hidden={!open}
     inert={!open}
-    className={`grid overflow-hidden transition-[grid-template-rows] duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+    className={`grid overflow-hidden transition-[grid-template-rows] ${open ? 'duration-[120ms]' : 'duration-200'} ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
   >
     <div className="min-h-0 overflow-hidden">
         <div data-accordion-open={open} className={`accordion-fold-content pt-4 ${className}`}>
@@ -180,32 +180,45 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
     if (!scroller) return;
 
     let frame = 0;
+    let pinnedId: string | null = null;
+    const appHeader = scroller.querySelector<HTMLElement>('header');
+    const sections = Array.from(scroller.querySelectorAll<HTMLElement>('[data-list-category]'));
+    let lastOffset = -1;
     const updatePinnedCategory = () => {
       frame = 0;
-      const appHeader = scroller.querySelector<HTMLElement>('header');
       const scrollerTop = scroller.getBoundingClientRect().top;
-      const appHeaderBottom = appHeader?.getBoundingClientRect().bottom ?? scrollerTop + 50;
-      const categoryOffset = Math.max(0, appHeaderBottom - scrollerTop);
-      const stickyLine = appHeaderBottom;
-      const headers = Array.from(document.querySelectorAll<HTMLElement>('[data-list-section-header]'));
-      const currentHeader = headers.filter((header) => {
-        const headerRect = header.getBoundingClientRect();
-        const section = header.closest<HTMLElement>('[data-list-category]');
-        const sectionBottom = section?.getBoundingClientRect().bottom ?? 0;
-        return headerRect.top <= stickyLine + 2 && sectionBottom > stickyLine + 8;
+      const stickyLine = appHeader?.getBoundingClientRect().bottom ?? scrollerTop + 50;
+      const categoryOffset = Math.max(0, stickyLine - scrollerTop);
+      // Use natural section positions instead of already-pinned header positions.
+      const currentSection = sections.filter((section) => {
+        const rect = section.getBoundingClientRect();
+        const isActive = section.dataset.listCategory === pinnedId;
+        return rect.top <= stickyLine + (isActive ? 12 : 0) && rect.bottom > stickyLine + 8;
       }).at(-1);
-      const nextId = currentHeader?.dataset.listSectionHeader ?? null;
-      scroller.style.setProperty('--list-sticky-top', `${categoryOffset}px`);
-      setPinnedListCategory((previous) => previous === nextId ? previous : nextId);
+      const nextId = currentSection?.dataset.listCategory ?? null;
+      // Finish layout reads before changing styles or React state.
+      if (categoryOffset !== lastOffset) {
+        scroller.style.setProperty('--list-sticky-top', categoryOffset + 'px');
+        lastOffset = categoryOffset;
+      }
+      if (nextId !== pinnedId) {
+        pinnedId = nextId;
+        setPinnedListCategory(nextId);
+      }
     };
 
     const scheduleUpdate = () => {
       if (!frame) frame = window.requestAnimationFrame(updatePinnedCategory);
     };
+    // Recheck when a header or accordion changes height, even without scrolling.
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
+    if (appHeader) resizeObserver.observe(appHeader);
+    sections.forEach((section) => resizeObserver.observe(section));
     scroller.addEventListener('scroll', scheduleUpdate, { passive: true });
     scheduleUpdate();
     return () => {
       scroller.removeEventListener('scroll', scheduleUpdate);
+      resizeObserver.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, [extraSections.length]);
@@ -289,7 +302,7 @@ export const ListsScreen: React.FC<ListsScreenProps> = ({
   };
 
   const shoppingMasterItems = groceryItems.filter((g) => g.group !== 'Vegetables' && g.group !== 'Fruit' && g.isInMaster !== false);
-  const buyNowCount = groceryItems.filter((g) => g.group !== 'Vegetables' && g.needed && !g.completed).length;
+  const buyNowCount = groceryItems.filter((g) => g.group !== 'Vegetables' && g.group !== 'Fruit' && g.needed && !g.completed).length;
   const pendingVegCount = groceryItems.filter((g) => g.group === 'Vegetables' && !g.completed).length;
   const pendingFruitCount = groceryItems.filter((g) => g.group === 'Fruit' && !g.completed).length;
   const fruitItemCount = groceryItems.filter((g) => g.group === 'Fruit').length;

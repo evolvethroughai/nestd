@@ -13,7 +13,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   uncompletedTasksCount,
 }) => {
   return (
-    <nav className="sticky bottom-0 inset-x-0 z-40 pb-safe bg-surface-container-lowest/95 backdrop-blur-xl border-t border-outline-variant/30 shadow-[0_-2px_16px_rgba(70,72,212,0.06)] w-full">
+    <nav className="sticky bottom-0 inset-x-0 z-40 pb-safe bg-surface-container-lowest/95 backdrop-blur-xl border-t border-slate-200/70 shadow-[0_-2px_12px_rgba(15,23,42,0.04)] w-full">
       <div className="flex justify-around items-center h-16 px-4 max-w-md mx-auto">
         {/* Today Tab */}
         <button
