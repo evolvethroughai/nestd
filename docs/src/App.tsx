@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { fbSignIn, fbSignOut, onAuthChange, syncToFirestore, listenFirestore, listenUserProfile, saveUserProfile, User } from './firebase';
+import { fbSignIn, fbSignOut, onAuthChange, syncToFirestore, listenFirestore, listenUserProfile, saveUserProfile, firebaseErrorMessage, User } from './firebase';
 import {
   TabType,
   TodayTask,
@@ -966,7 +966,7 @@ export default function App() {
               personalizedGreeting: remoteSettings?.personalizedGreeting !== false,
             },
           });
-        });
+        }, (error) => showToast(firebaseErrorMessage(error)));
         // Listen for remote changes and merge into local state
         firestoreUnsubRef.current = listenFirestore(user.uid, (json) => {
           if (json === null) {
@@ -998,6 +998,9 @@ export default function App() {
           } catch {
             showToast('Could not read this account’s saved data. Sync is paused.');
           }
+        }, (error) => {
+          setIsCloudDataReady(false);
+          showToast(firebaseErrorMessage(error));
         });
       } else {
         setIsCloudDataReady(false);
@@ -1029,14 +1032,15 @@ export default function App() {
     if (serializedData === lastSyncedDataRef.current) return;
     syncTimerRef.current = setTimeout(() => {
       lastSyncedDataRef.current = serializedData;
-      syncToFirestore(fbUser.uid, data).catch(() => {
+      syncToFirestore(fbUser.uid, data).catch((error) => {
         if (lastSyncedDataRef.current === serializedData) lastSyncedDataRef.current = null;
+        showToast(firebaseErrorMessage(error));
       });
     }, 800);
   }, [groceryItems, groceryPurchaseHistory, produceSchedules, groceryStores, groceryCategories, chits, emis, bills, subBills, quickTasks, investments, healthItems, business, todayTasks, streak, fbUser, isCloudDataReady]);
 
-  const handleSignIn = () => {
-    fbSignIn().catch((e) => showToast('Sign-in failed: ' + e.message));
+  const handleSignIn = async () => {
+    await fbSignIn();
   };
 
   const handleSignOut = () => {

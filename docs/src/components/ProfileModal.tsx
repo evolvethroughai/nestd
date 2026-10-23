@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User } from '../firebase';
+import { User, firebaseErrorMessage } from '../firebase';
 import { UserProfile } from '../types';
 
 interface ProfileModalProps {
@@ -10,7 +10,7 @@ interface ProfileModalProps {
   profile: UserProfile;
   onSaveProfile: (profile: UserProfile) => Promise<void>;
   streak: number;
-  onSignIn: () => void;
+  onSignIn: () => Promise<void>;
   onSignOut: () => void;
 }
 
@@ -29,6 +29,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [draft, setDraft] = useState(profile);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -58,6 +60,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   const updateSetting = (key: keyof UserProfile['settings'], value: boolean) => {
     setDraft((current) => ({ ...current, settings: { ...current.settings, [key]: value } }));
+  };
+
+  const signIn = async () => {
+    setIsSigningIn(true);
+    setSignInError('');
+    try {
+      await onSignIn();
+      onClose();
+    } catch (error) {
+      setSignInError(firebaseErrorMessage(error));
+    } finally {
+      setIsSigningIn(false);
+    }
   };
 
   return (
@@ -198,12 +213,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         ) : (
           <div className="p-5 pt-2">
             <button
-              onClick={() => { onSignIn(); onClose(); }}
+              onClick={signIn}
+              disabled={isSigningIn}
               className="w-full py-3 px-4 rounded-xl bg-primary text-on-primary shadow-xs flex items-center justify-center gap-2 text-sm font-bold hover:bg-primary-container active:scale-[0.99] transition-all"
             >
               <span className="material-symbols-outlined text-[18px]">login</span>
-              Continue with Google
+              {isSigningIn ? 'Signing in...' : 'Continue with Google'}
             </button>
+            {signInError && <p role="alert" className="mt-3 text-sm text-rose-700 break-words">{signInError}</p>}
             <button onClick={onClose} className="w-full mt-2 py-2.5 text-on-surface-variant text-xs font-semibold hover:bg-surface-container rounded-xl">Continue without signing in</button>
           </div>
         )}
